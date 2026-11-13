@@ -25,6 +25,7 @@ type FilePage struct {
 type DropFiles struct {
 	Paths []string `json:"paths"`
 	Pane  string   `json:"pane"` // data-pane attribute of the drop target, "" if none
+	Dir   string   `json:"dir"`  // data-path of a folder dropped onto, "" for the pane's current directory
 }
 
 // Registration gives the frontend generated types for each event payload.
