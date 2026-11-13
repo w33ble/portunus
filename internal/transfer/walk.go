@@ -246,6 +246,9 @@ func (w *copyWalker) resolution() resolution {
 }
 
 func (w *copyWalker) fileEntry(src, dst string, ent, old vfs.Entry, exists bool) error {
+	if w.e.alreadyFinished(w.j, dst) {
+		return nil
+	}
 	if exists && old.IsDir {
 		w.fail(taskFile, src, dst, errDstIsDir)
 		return nil
@@ -337,7 +340,9 @@ func (w *deleteWalker) root(sources []string) {
 		ent, err := w.j.src.Stat(w.ctx, src)
 		switch {
 		case errors.Is(err, vfs.ErrNotExist):
-			w.gone(src)
+			if !w.e.alreadyFinished(w.j, src) {
+				w.gone(src)
+			}
 			continue
 		case err != nil:
 			w.fail(taskSource, src, fmt.Errorf("stat %s: %w", src, err))

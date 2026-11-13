@@ -86,6 +86,7 @@ export const transfers = {
     call(TransferService.Delete({ conn, paths })),
   cancel: (jobId: string): Promise<void> => call(TransferService.Cancel(jobId)),
   retry: (jobId: string): Promise<void> => call(TransferService.Retry(jobId)),
+  resume: (jobId: string): Promise<void> => call(TransferService.Resume(jobId)),
   clear: (): Promise<void> => call(TransferService.Clear()),
 };
 

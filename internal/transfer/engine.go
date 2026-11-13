@@ -35,6 +35,7 @@ var (
 	ErrClosed       = errors.New("transfer: engine closed")
 	ErrUnknownJob   = errors.New("transfer: unknown job")
 	ErrNotRetryable = errors.New("transfer: job has no failed tasks to retry")
+	ErrNotResumable = errors.New("transfer: only canceled jobs can be resumed")
 	ErrNoSources    = errors.New("transfer: no sources")
 	ErrIntoSelf     = errors.New("transfer: cannot copy a directory into itself")
 	ErrOntoSelf     = errors.New("transfer: cannot copy an item onto itself")

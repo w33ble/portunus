@@ -72,6 +72,7 @@ export function createApiMock() {
       remove: vi.fn(),
       cancel: vi.fn(),
       retry: vi.fn(),
+      resume: vi.fn(),
       clear: vi.fn(),
     },
     prompts: {

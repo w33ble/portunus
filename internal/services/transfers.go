@@ -26,6 +26,11 @@ func (s *TransferService) Retry(jobID string) error {
 	return s.app.engine.Retry(jobID)
 }
 
+// Resume restarts a canceled job, skipping what already finished.
+func (s *TransferService) Resume(jobID string) error {
+	return s.app.engine.Resume(jobID)
+}
+
 // Clear removes finished jobs from the list.
 func (s *TransferService) Clear() {
 	s.app.engine.Clear()
