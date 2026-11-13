@@ -20,12 +20,12 @@ import (
 )
 
 func TestConformance(t *testing.T) {
-	if minioEndpoint == "" {
-		t.Skip("MinIO via docker unavailable")
+	if s3Endpoint == "" {
+		t.Skip("S3 server via docker unavailable")
 	}
 	vfstest.Run(t, vfstest.Harness{
 		New: func(t *testing.T) (vfs.FS, string) {
-			f, bucket := newBucket(t, minioConfig())
+			f, bucket := newBucket(t, serverConfig())
 			root := bucket + "/work"
 			if err := f.Mkdir(context.Background(), root); err != nil {
 				t.Fatal(err)
@@ -81,7 +81,7 @@ func pendingUploads(t *testing.T, f *FS, bucket string) int {
 }
 
 func TestMultipartUploadRoundTrip(t *testing.T) {
-	cfg := minioConfig()
+	cfg := serverConfig()
 	cfg.PartSize = 5 << 20
 	f, root := newBucket(t, cfg)
 	data := randBytes(5<<20*3 + 12345) // four parts, last one short
@@ -109,7 +109,7 @@ func TestMultipartUploadRoundTrip(t *testing.T) {
 }
 
 func TestMultipartExactPartMultiple(t *testing.T) {
-	cfg := minioConfig()
+	cfg := serverConfig()
 	cfg.PartSize = 5 << 20
 	f, root := newBucket(t, cfg)
 	data := randBytes(10 << 20)
@@ -120,7 +120,7 @@ func TestMultipartExactPartMultiple(t *testing.T) {
 }
 
 func TestMultipartAbortLeavesNothing(t *testing.T) {
-	cfg := minioConfig()
+	cfg := serverConfig()
 	cfg.PartSize = 5 << 20
 	f, root := newBucket(t, cfg)
 	size := 12 << 20
@@ -143,7 +143,7 @@ func TestMultipartAbortLeavesNothing(t *testing.T) {
 }
 
 func TestSizeMismatchAbortsMultipart(t *testing.T) {
-	cfg := minioConfig()
+	cfg := serverConfig()
 	cfg.PartSize = 5 << 20
 	f, root := newBucket(t, cfg)
 	w, err := f.Create(context.Background(), root+"/short", vfs.CreateOpts{Size: 20 << 20})
@@ -165,7 +165,7 @@ func TestSizeMismatchAbortsMultipart(t *testing.T) {
 }
 
 func TestRootListsBucketsAndFixedBucketSkipsListing(t *testing.T) {
-	f, root := newBucket(t, minioConfig())
+	f, root := newBucket(t, serverConfig())
 	var names []string
 	err := f.List(context.Background(), "/", func(es []vfs.Entry) error {
 		for _, e := range es {
@@ -184,9 +184,9 @@ func TestRootListsBucketsAndFixedBucketSkipsListing(t *testing.T) {
 	}
 
 	// A fixed bucket must list without ListBuckets (credentials here can't even list).
-	cfg := minioConfig()
+	cfg := serverConfig()
 	cfg.Bucket = root[1:]
-	fixed := newMinioFS(t, cfg)
+	fixed := newServerFS(t, cfg)
 	var got []string
 	if err := fixed.List(context.Background(), "/", func(es []vfs.Entry) error {
 		for _, e := range es {
@@ -210,7 +210,7 @@ func TestRootListsBucketsAndFixedBucketSkipsListing(t *testing.T) {
 func contains(s []string, v string) bool { return slices.Contains(s, v) }
 
 func TestRenameObjectAndPrefix(t *testing.T) {
-	f, root := newBucket(t, minioConfig())
+	f, root := newBucket(t, serverConfig())
 	ctx := context.Background()
 	put(t, f, root+"/a b+c.txt", []byte("hello"))
 	if err := f.Rename(ctx, root+"/a b+c.txt", root+"/moved/x é.txt"); err != nil {
@@ -232,7 +232,7 @@ func TestRenameObjectAndPrefix(t *testing.T) {
 }
 
 func TestRemoveNonEmptyPrefixFails(t *testing.T) {
-	f, root := newBucket(t, minioConfig())
+	f, root := newBucket(t, serverConfig())
 	ctx := context.Background()
 	if err := f.Mkdir(ctx, root+"/d"); err != nil {
 		t.Fatal(err)
@@ -257,7 +257,7 @@ func TestRemoveNonEmptyPrefixFails(t *testing.T) {
 }
 
 func TestMkdirOverFileFails(t *testing.T) {
-	f, root := newBucket(t, minioConfig())
+	f, root := newBucket(t, serverConfig())
 	put(t, f, root+"/file", []byte("x"))
 	if err := f.Mkdir(context.Background(), root+"/file"); !errors.Is(err, vfs.ErrExist) {
 		t.Fatalf("Mkdir over file = %v", err)
@@ -265,7 +265,7 @@ func TestMkdirOverFileFails(t *testing.T) {
 }
 
 func TestOpenCloseCancelsRead(t *testing.T) {
-	f, root := newBucket(t, minioConfig())
+	f, root := newBucket(t, serverConfig())
 	put(t, f, root+"/f", randBytes(1<<20))
 	r, err := f.Open(context.Background(), root+"/f", 1<<20) // offset == size
 	if err != nil {
@@ -371,7 +371,7 @@ func TestListEntriesSkipsAliasingKeys(t *testing.T) {
 }
 
 func TestAbortConcurrentWithWrite(t *testing.T) {
-	cfg := minioConfig()
+	cfg := serverConfig()
 	cfg.PartSize = 5 << 20
 	f, root := newBucket(t, cfg)
 	ctx := context.Background()

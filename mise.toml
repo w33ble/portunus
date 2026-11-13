@@ -69,6 +69,6 @@ depends = ["lint", "typecheck", "test"]
 run = ["golangci-lint fmt --diff ./...", "pnpm --dir frontend fmt:check"]
 
 [tasks.e2e]
-description = "End-to-end smoke: real sshd + MinIO + server-mode build + Playwright in Docker (Linux)"
+description = "End-to-end smoke: real sshd + RustFS + server-mode build + Playwright in Docker (Linux)"
 depends = ["frontend:build"]
 run = "bash e2e/run.sh"

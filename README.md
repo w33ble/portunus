@@ -47,14 +47,14 @@ Go lint and tests run with the `purego` build tag. That's Wails' CGO-free backen
 
 ### Tests
 
-- Go unit and integration tests run against real servers. SFTP tests start an unprivileged OpenSSH `sshd`. S3 tests start MinIO in Docker and skip when Docker isn't available. A shared conformance suite (`internal/vfs/vfstest`) runs against every backend.
+- Go unit and integration tests run against real servers. SFTP tests start an unprivileged OpenSSH `sshd`. S3 tests start RustFS (an S3-compatible server) in Docker and skip when Docker isn't available. A shared conformance suite (`internal/vfs/vfstest`) runs against every backend.
 - Frontend tests use vitest (`pnpm --dir frontend test`).
-- `mise run e2e` builds the app in Wails server mode (`-tags server`), starts sshd and MinIO with throwaway fixtures, and drives the real UI with Playwright in Docker: connect, trust a host key, copy with conflicts, drag, delete, rename, and an S3 round trip. Screenshots land in `e2e/out/`.
+- `mise run e2e` builds the app in Wails server mode (`-tags server`), starts sshd and RustFS with throwaway fixtures, and drives the real UI with Playwright in Docker: connect, trust a host key, copy with conflicts, drag, delete, rename, and an S3 round trip. Screenshots land in `e2e/out/`.
 
 ### Environment
 
 - `PORTUNUS_SSH_CONFIG`: use this ssh config file instead of `~/.ssh/config`. It's passed to `ssh -G -F`, which also skips `/etc/ssh/ssh_config`.
-- `PORTUNUS_MINIO_IMAGE`: MinIO image for the S3 tests and e2e.
+- `PORTUNUS_S3_IMAGE`: S3-compatible server image for the S3 tests and e2e (default `rustfs/rustfs:1.0.5`).
 
 App data lives in `~/Library/Application Support/Portunus` (macOS) or `~/.config/Portunus` (Linux): `settings.json`, `profiles.json`, and a fallback `known_hosts`.
 

@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# End-to-end smoke test: real sshd + MinIO + Wails server-mode build + Playwright (in Docker).
+# End-to-end smoke test: real sshd + RustFS (S3) + Wails server-mode build + Playwright (in Docker).
 # Linux only (uses --network host). Screenshots land in e2e/out.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PW_IMAGE="${PW_IMAGE:-mcr.microsoft.com/playwright:v1.65.0-noble}"
-MINIO_IMAGE="${PORTUNUS_MINIO_IMAGE:-bitnamilegacy/minio:latest}"
+S3_IMAGE="${PORTUNUS_S3_IMAGE:-rustfs/rustfs:1.0.5}"
 OUT="$ROOT/e2e/out"
 E2E_DIR="$(mktemp -d /tmp/portunus-e2e.XXXXXX)"
-MINIO_USER=e2eadmin
-MINIO_PASS=e2esecret123
+S3_USER=e2eadmin
+S3_PASS=e2esecret123
 
 free_port() {
   local p
@@ -22,7 +22,7 @@ free_port() {
 cleanup() {
   [[ -f "$E2E_DIR/sshd/sshd.pid" ]] && kill "$(cat "$E2E_DIR/sshd/sshd.pid")" 2>/dev/null || true
   [[ -n "${SERVER_PID:-}" ]] && kill "$SERVER_PID" 2>/dev/null || true
-  [[ -n "${MINIO_ID:-}" ]] && docker rm -f "$MINIO_ID" >/dev/null 2>&1 || true
+  [[ -n "${S3_ID:-}" ]] && docker rm -f "$S3_ID" >/dev/null 2>&1 || true
   rm -rf "$E2E_DIR"
 }
 trap cleanup EXIT
@@ -69,13 +69,14 @@ echo "only on remote" >"$E2E_DIR/remote/remote-only.txt"
 
 /usr/sbin/sshd -f "$E2E_DIR/sshd/sshd_config" -E "$E2E_DIR/sshd/log"
 
-echo "== minio"
-MINIO_ID="$(docker run -d --rm -p 127.0.0.1::9000 --tmpfs /data:rw,mode=1777 --entrypoint minio \
-  -e MINIO_ROOT_USER=$MINIO_USER -e MINIO_ROOT_PASSWORD=$MINIO_PASS \
-  "$MINIO_IMAGE" server /data --address :9000)"
-MINIO_ADDR="$(docker port "$MINIO_ID" 9000/tcp | head -1)"
+# Buckets are created through the app (New folder at the S3 root), so no rc/mc setup is needed.
+echo "== rustfs"
+S3_ID="$(docker run -d --rm -p 127.0.0.1::9000 --tmpfs /data:rw,mode=1777 \
+  -e RUSTFS_ACCESS_KEY=$S3_USER -e RUSTFS_SECRET_KEY=$S3_PASS \
+  "$S3_IMAGE" /data)"
+S3_ADDR="$(docker port "$S3_ID" 9000/tcp | head -1)"
 for _ in $(seq 1 50); do
-  curl -fs "http://$MINIO_ADDR/minio/health/live" >/dev/null && break
+  curl -fs "http://$S3_ADDR/health" >/dev/null && break
   sleep 0.2
 done
 
@@ -95,7 +96,7 @@ status=0
 docker run --rm --network host --user "$(id -u):$(id -g)" -e HOME=/tmp \
   -v "$ROOT/e2e:/work" -v "$OUT:/out" -v "$E2E_DIR:$E2E_DIR" -w /work \
   -e APP_URL="http://127.0.0.1:$APP_PORT/" -e E2E_DIR="$E2E_DIR" \
-  -e MINIO_ENDPOINT="http://$MINIO_ADDR" -e MINIO_USER=$MINIO_USER -e MINIO_PASS=$MINIO_PASS \
+  -e S3_ENDPOINT="http://$S3_ADDR" -e S3_USER=$S3_USER -e S3_PASS=$S3_PASS \
   "$PW_IMAGE" bash -c '[ -d node_modules/playwright ] || npm i --no-save --silent playwright@1.65.0; node flows/sftp.mjs && node flows/s3.mjs' || status=$?
 
 if [[ $status -ne 0 ]]; then

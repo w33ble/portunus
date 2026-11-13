@@ -8,18 +8,18 @@ await flow('s3', async ({ page, left, right, row, step, shot, goTo }) => {
   await right.getByLabel('Connection').selectOption({ label: 'Manage S3 profiles…' });
   await page.getByRole('button', { name: 'Add profile…' }).click();
   const dlg = page.getByRole('dialog');
-  await dlg.getByLabel('Name', { exact: true }).fill('minio-e2e');
+  await dlg.getByLabel('Name', { exact: true }).fill('rustfs-e2e');
   await dlg.getByLabel('Access key', { exact: true }).check();
-  await dlg.getByLabel('Access key ID').fill(process.env.MINIO_USER);
-  await dlg.getByLabel('Secret access key').fill(process.env.MINIO_PASS);
-  await dlg.getByLabel('Endpoint (optional)').fill(process.env.MINIO_ENDPOINT);
+  await dlg.getByLabel('Access key ID').fill(process.env.S3_USER);
+  await dlg.getByLabel('Secret access key').fill(process.env.S3_PASS);
+  await dlg.getByLabel('Endpoint (optional)').fill(process.env.S3_ENDPOINT);
   await dlg.getByLabel(/path-style/).check();
   await shot('profile-form');
   await page.getByRole('button', { name: 'Save' }).click();
   await page.getByRole('button', { name: 'Done' }).click();
 
   step('connect and create a bucket');
-  await right.getByLabel('Connection').selectOption({ label: 'minio-e2e' });
+  await right.getByLabel('Connection').selectOption({ label: 'rustfs-e2e' });
   await page.waitForTimeout(1000);
   await right.getByLabel('New folder').click();
   await page.keyboard.type('e2e-bucket');
