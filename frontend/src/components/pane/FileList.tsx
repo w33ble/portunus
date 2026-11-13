@@ -4,6 +4,7 @@ import type { Entry } from '../../api/types';
 import { ENTRIES_MIME, encodeDragPayload } from '../../lib/dragData';
 import { shownEntries } from '../../lib/listing';
 import { clickSelect, pruneSelection, selectOnly } from '../../lib/selection';
+import { IS_MAC } from '../../lib/platform';
 import { visibleEntries } from '../../lib/sort';
 import {
   copyToOtherPane,
@@ -33,7 +34,7 @@ interface MenuState {
   y: number;
 }
 
-const MOD = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform) ? '⌘' : 'Ctrl+';
+const MOD = IS_MAC ? '⌘' : 'Ctrl+';
 
 export function FileList({ paneId }: { paneId: PaneId }) {
   const pane = usePanes((s) => s.panes[paneId]);
