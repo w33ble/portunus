@@ -15,13 +15,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
+	"github.com/w33ble/portunus/internal/testutil"
 	"github.com/w33ble/portunus/internal/vfs"
 	"github.com/w33ble/portunus/internal/vfs/vfstest"
 )
 
 func TestConformance(t *testing.T) {
 	if s3Endpoint == "" {
-		t.Skip("S3 server via docker unavailable")
+		testutil.Unavailable(t, "S3 server via docker unavailable")
 	}
 	vfstest.Run(t, vfstest.Harness{
 		New: func(t *testing.T) (vfs.FS, string) {

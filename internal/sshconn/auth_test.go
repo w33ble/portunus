@@ -15,6 +15,7 @@ import (
 	"github.com/w33ble/portunus/internal/prompt"
 	"github.com/w33ble/portunus/internal/sshcfg"
 	"github.com/w33ble/portunus/internal/sshconn"
+	"github.com/w33ble/portunus/internal/testutil"
 	"github.com/w33ble/portunus/internal/testutil/sshdtest"
 )
 
@@ -311,7 +312,7 @@ func TestNoPrompterFailsPasswordAuth(t *testing.T) {
 func TestCertificateFile(t *testing.T) {
 	t.Parallel()
 	if _, err := exec.LookPath("ssh-keygen"); err != nil {
-		t.Skip("ssh-keygen not available")
+		testutil.Unavailable(t, "ssh-keygen not available")
 	}
 	ca, user := sshdtest.NewKey(t), sshdtest.NewKey(t)
 	dir := t.TempDir()

@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/ssh"
+
+	"github.com/w33ble/portunus/internal/testutil"
 )
 
 const sshdPath = "/usr/sbin/sshd"
@@ -84,7 +86,7 @@ type Server struct {
 func Start(t testing.TB, o Options) *Server {
 	t.Helper()
 	if _, err := os.Stat(sshdPath); err != nil {
-		t.Skipf("sshd not available: %v", err)
+		testutil.Unavailable(t, "sshd not available: %v", err)
 	}
 	u, err := user.Current()
 	if err != nil {

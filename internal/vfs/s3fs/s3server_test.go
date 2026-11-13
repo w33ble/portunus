@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/w33ble/portunus/internal/testutil"
 )
 
 // defaultS3Image is an S3-compatible server (RustFS) for integration tests.
@@ -108,7 +110,7 @@ func serverConfig() Config {
 func newServerFS(t *testing.T, cfg Config) *FS {
 	t.Helper()
 	if s3Endpoint == "" {
-		t.Skip("S3 server via docker unavailable")
+		testutil.Unavailable(t, "S3 server via docker unavailable")
 	}
 	f, err := New(context.Background(), cfg)
 	if err != nil {

@@ -8,13 +8,15 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/w33ble/portunus/internal/testutil"
 )
 
 func testResolver(t *testing.T) Resolver {
 	t.Helper()
 	ssh, err := LocateSSH()
 	if err != nil {
-		t.Skip("ssh not available")
+		testutil.Unavailable(t, "ssh not available")
 	}
 	home := fixtureHome(t)
 	return Resolver{
@@ -283,7 +285,7 @@ func TestLocateSSH(t *testing.T) {
 	t.Parallel()
 	p, err := LocateSSH()
 	if err != nil {
-		t.Skip("ssh not available")
+		testutil.Unavailable(t, "ssh not available")
 	}
 	if _, err := os.Stat(p); err != nil {
 		t.Errorf("LocateSSH returned %q: %v", p, err)
