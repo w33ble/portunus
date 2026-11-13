@@ -40,6 +40,12 @@
   background: color-mix(in srgb, var(--accent) 88%, black);
 }
 
+/* Like macOS, a disabled default button loses its accent; disabled text on accent is unreadable. */
+.primary:disabled {
+  background: var(--bg-field);
+  box-shadow: var(--shadow-control);
+}
+
 .danger {
   color: var(--danger);
 }
