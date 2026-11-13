@@ -12,7 +12,12 @@
   outline: none;
 }
 
+/* Panes get script focus on launch, which counts as :focus-visible; only ring it for keyboard users. */
 .scroller:focus-visible {
+  box-shadow: none;
+}
+
+:root[data-modality='keyboard'] .scroller:focus-visible {
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
