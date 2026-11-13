@@ -100,3 +100,15 @@ type Writer interface {
 	Commit() error
 	Abort() error
 }
+
+// CaseInsensitive is optionally implemented by filesystems whose name lookups ignore case
+// (macOS APFS/HFS+ defaults, Windows), so "README" and "readme" are the same entry.
+type CaseInsensitive interface {
+	CaseInsensitive() bool
+}
+
+// IsCaseInsensitive reports whether fsys matches names without regard to case.
+func IsCaseInsensitive(fsys FS) bool {
+	ci, ok := fsys.(CaseInsensitive)
+	return ok && ci.CaseInsensitive()
+}
