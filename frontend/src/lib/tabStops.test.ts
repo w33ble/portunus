@@ -45,6 +45,15 @@ describe('tabStops', () => {
     expect(ids(tabStops(root))).toEqual(['keys', 'o1', 'save']);
   });
 
+  it('treats an unchecked focused radio as its group stop', () => {
+    const root = mount(`
+      <input type="radio" name="auth" id="a" checked>
+      <input type="radio" name="auth" id="b">
+      <button id="save">Save</button>`);
+    expect(nextTabStop(root, root.querySelector('#b'), false)?.id).toBe('save');
+    expect(nextTabStop(root, root.querySelector('#b'), true)?.id).toBe('save');
+  });
+
   it('returns nothing to focus in an empty dialog', () => {
     expect(nextTabStop(mount('<p>text</p>'), null, false)).toBeUndefined();
   });

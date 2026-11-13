@@ -22,6 +22,18 @@ export function tabStops(root: HTMLElement): HTMLElement[] {
   });
 }
 
+function sameRadioGroup(stop: HTMLElement, other: Element): boolean {
+  return (
+    stop instanceof HTMLInputElement &&
+    other instanceof HTMLInputElement &&
+    stop.type === 'radio' &&
+    other.type === 'radio' &&
+    stop.name !== '' &&
+    stop.name === other.name &&
+    stop.form === other.form
+  );
+}
+
 /** The stop after (or before) `current`, wrapping; the first (or last) when focus is elsewhere. */
 export function nextTabStop(
   root: HTMLElement,
@@ -31,7 +43,7 @@ export function nextTabStop(
   const stops = tabStops(root);
   if (stops.length === 0) return undefined;
 
-  const at = current ? stops.indexOf(current as HTMLElement) : -1;
+  const at = current ? stops.findIndex((el) => el === current || sameRadioGroup(el, current)) : -1;
   if (at === -1) return backward ? stops.at(-1) : stops[0];
   return stops[(at + (backward ? -1 : 1) + stops.length) % stops.length];
 }

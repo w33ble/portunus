@@ -25,6 +25,22 @@ export function Modal({ title, children, actions, onCancel, onSubmit, width = 42
     return () => dialog?.close();
   }, []);
 
+  // On document, not the dialog: a removed focused control leaves focus on <body>, outside it.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const dialog = ref.current;
+      if (!dialog || event.defaultPrevented || event.key !== 'Tab') return;
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (dialog !== [...document.querySelectorAll('dialog:modal')].at(-1)) return;
+      const next = nextTabStop(dialog, document.activeElement, event.shiftKey);
+      if (!next) return;
+      event.preventDefault();
+      next.focus();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   const submit = (event: FormEvent) => {
     event.preventDefault();
     onSubmit?.();
@@ -39,13 +55,6 @@ export function Modal({ title, children, actions, onCancel, onSubmit, width = 42
       onCancel={(event) => {
         event.preventDefault();
         onCancel?.();
-      }}
-      onKeyDown={(event) => {
-        if (event.key !== 'Tab' || event.altKey || event.ctrlKey || event.metaKey) return;
-        const next = nextTabStop(event.currentTarget, document.activeElement, event.shiftKey);
-        if (!next) return;
-        event.preventDefault();
-        next.focus();
       }}
     >
       <form className={styles.form} onSubmit={submit}>
