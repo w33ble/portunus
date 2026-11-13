@@ -14,6 +14,7 @@ interface TransfersState {
   apply: (update: Update) => void;
   cancel: (jobId: string) => Promise<void>;
   retry: (jobId: string) => Promise<void>;
+  resume: (jobId: string) => Promise<void>;
   clearFinished: () => Promise<void>;
 }
 
@@ -61,6 +62,14 @@ export const useTransfers = create<TransfersState>()((set, get) => ({
       await api.transfers.retry(jobId);
     } catch (e) {
       useUi.getState().showError('Couldn’t retry the transfer', toAppError(e));
+    }
+  },
+
+  async resume(jobId) {
+    try {
+      await api.transfers.resume(jobId);
+    } catch (e) {
+      useUi.getState().showError('Couldn’t resume the transfer', toAppError(e));
     }
   },
 

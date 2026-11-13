@@ -90,6 +90,12 @@ describe('useTransfers', () => {
     expect(refreshWhere).toHaveBeenCalledWith('local');
   });
 
+  it('reports failures to resume through the error dialog', async () => {
+    vi.mocked(api.transfers.resume).mockRejectedValue(new Error('gone'));
+    await useTransfers.getState().resume('a');
+    expect(useUi.getState().dialog).toMatchObject({ kind: 'error' });
+  });
+
   it('reports failures to cancel through the error dialog', async () => {
     vi.mocked(api.transfers.cancel).mockRejectedValue(new Error('gone'));
     await useTransfers.getState().cancel('a');
