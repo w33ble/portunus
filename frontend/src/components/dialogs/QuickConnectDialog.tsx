@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { targets } from '../../api';
 import { parseQuickConnect } from '../../lib/quickConnect';
 import { quickConnectLabel } from '../../lib/targets';
-import { useConnections } from '../../stores/connections';
 import type { PaneId } from '../../stores/paneTypes';
 import { usePanes } from '../../stores/panes';
 import controls from '../ui/controls.module.css';
@@ -16,7 +15,6 @@ interface Props {
 export function QuickConnectDialog({ paneId, onClose }: Props) {
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const sshUnavailable = useConnections((s) => s.sshUnavailable);
 
   const submit = () => {
     const parsed = parseQuickConnect(text);
@@ -52,7 +50,6 @@ export function QuickConnectDialog({ paneId, onClose }: Props) {
         </>
       }
     >
-      {sshUnavailable !== '' && <p className={controls.notice}>{sshUnavailable}</p>}
       <label className={controls.label}>
         Server (SFTP over SSH)
         <input

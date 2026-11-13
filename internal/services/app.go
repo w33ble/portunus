@@ -74,7 +74,7 @@ func New(cfg Config) (*App, error) {
 
 	sshPath, err := sshcfg.LocateSSH()
 	if err != nil {
-		a.sshErr = fmt.Errorf("OpenSSH client not found; SSH connections need the ssh binary: %w", err)
+		a.sshErr = fmt.Errorf("OpenSSH client not found, so ~/.ssh/config hosts are unavailable (quick connect still works): %w", err)
 	}
 	// An explicit config is passed to `ssh -G -F`, which also skips /etc/ssh/ssh_config,
 	// so it's opt-in for non-default setups and tests only.
