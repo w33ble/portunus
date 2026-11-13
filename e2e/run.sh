@@ -98,7 +98,7 @@ docker run --rm --network host --user "$(id -u):$(id -g)" -e HOME=/tmp \
   -v "$ROOT/e2e:/work" -v "$OUT:/out" -v "$E2E_DIR:$E2E_DIR" -w /work \
   -e APP_URL="http://127.0.0.1:$APP_PORT/" -e E2E_DIR="$E2E_DIR" \
   -e S3_ENDPOINT="http://$S3_ADDR" -e S3_USER=$S3_USER -e S3_PASS=$S3_PASS \
-  "$PW_IMAGE" bash -c '[ -d node_modules/playwright ] || npm i --no-save --silent playwright@1.65.0; node flows/sftp.mjs && node flows/s3.mjs' || status=$?
+  "$PW_IMAGE" bash -c '[ -d node_modules/playwright ] || npm i --no-save --silent playwright@1.65.0; node flows/sftp.mjs && node flows/s3.mjs && node flows/dialogs.mjs' || status=$?
 
 if [[ $status -ne 0 ]]; then
   echo "== server log"; tail -50 "$E2E_DIR/server.log"
