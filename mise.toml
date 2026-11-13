@@ -2,12 +2,11 @@
 age = "latest"
 fnox = { version = "latest", workflow = "release.yml" }
 go = "1.27"
+"go:github.com/kojah/gohawk" = "0.7.2"
 "go:github.com/wailsapp/wails/v3/cmd/wails3" = "v3.1.0"
 golangci-lint = "2.15"
 node = "24"
 pnpm = "12"
-# C toolchain for `go test -race` on machines without gcc/clang (race needs cgo).
-zig = "0.15"
 
 # Wails needs cgo or the CGO-free `purego` backend; purego keeps Go checks runnable without GTK/WebKit headers.
 [tasks.dev]
@@ -43,10 +42,15 @@ depends = ["frontend:build"]
 run = ["go test -tags purego ./...", "pnpm --dir frontend test"]
 
 [tasks."test:race"]
-description = "Run Go tests with the race detector (zig cc as the C compiler)"
+description = "Run Go tests with the race detector (needs a C compiler; CI runs it on every PR)"
 depends = ["frontend:build"]
-env = { CGO_ENABLED = "1", CC = "zig cc" }
+env = { CGO_ENABLED = "1" }
 run = "go test -tags purego -race ./..."
+
+[tasks."lint:gohawk"]
+description = "Static concurrency and resource-lifetime analysis (gohawk core analyzers)"
+depends = ["frontend:build"]
+run = "gohawk -tags purego ./..."
 
 [tasks.lint]
 description = "Lint Go and frontend"
