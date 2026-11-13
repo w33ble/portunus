@@ -1,6 +1,7 @@
 package transfer
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -135,8 +136,13 @@ func (e *Engine) copyFile(j *job, t *task) error {
 // destination's ReaderFrom, then a 1 MiB buffer.
 func (e *Engine) pump(x *xfer, add func(int64)) error {
 	if wt, ok := x.r.(io.WriterTo); ok {
-		_, err := wt.WriteTo(&countWriter{w: x.w, add: add})
-		return err
+		// WriteTo hands over small chunks; pkg/sftp only pipelines writes larger than one
+		// packet, so batch them. Counting sits below the buffer so it reflects bytes written.
+		bw := bufio.NewWriterSize(&countWriter{w: x.w, add: add}, writeBatchSize)
+		if _, err := wt.WriteTo(bw); err != nil {
+			return err
+		}
+		return bw.Flush()
 	}
 	if rf, ok := x.w.(io.ReaderFrom); ok {
 		_, err := rf.ReadFrom(&countReader{r: x.r, add: add})

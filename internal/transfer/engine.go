@@ -26,6 +26,9 @@ const (
 	conflictQueueCap = 32 // bounds tasks parked on the conflict gate
 	maxFailedViews   = 200
 	copyBufSize      = 1 << 20
+	// writeBatchSize is how much WriteTo output is gathered before one Write: pkg/sftp only
+	// pipelines writes larger than a packet, and a deeper batch keeps its queue full.
+	writeBatchSize = 4 << 20
 )
 
 var (
@@ -34,6 +37,7 @@ var (
 	ErrNotRetryable = errors.New("transfer: job has no failed tasks to retry")
 	ErrNoSources    = errors.New("transfer: no sources")
 	ErrIntoSelf     = errors.New("transfer: cannot copy a directory into itself")
+	ErrOntoSelf     = errors.New("transfer: cannot copy an item onto itself")
 	// ErrInvalid wraps requests with empty or root paths, or an unknown policy.
 	ErrInvalid = errors.New("transfer: invalid request")
 )
@@ -381,13 +385,18 @@ func (r CopyRequest) normalize() (CopyRequest, error) {
 	if r.DstDir == "" {
 		return r, fmt.Errorf("%w: empty destination", ErrInvalid)
 	}
-	r.DstDir = path.Clean(r.DstDir)
+	if !isCanonical(r.DstDir) {
+		return r, fmt.Errorf("%w: destination %q is not a clean path", ErrInvalid, r.DstDir)
+	}
 	srcs, err := cleanPaths(r.Sources)
 	if err != nil {
 		return r, err
 	}
 	if r.SrcConn == r.DstConn {
 		for _, s := range srcs {
+			if path.Dir(s) == r.DstDir {
+				return r, fmt.Errorf("%w: %s into %s", ErrOntoSelf, s, r.DstDir)
+			}
 			if within(r.DstDir, s) {
 				return r, fmt.Errorf("%w: %s into %s", ErrIntoSelf, s, r.DstDir)
 			}
@@ -397,7 +406,12 @@ func (r CopyRequest) normalize() (CopyRequest, error) {
 	return r, nil
 }
 
-// cleanPaths returns cleaned copies of ps, rejecting empty and root paths.
+// isCanonical reports whether p is already in path.Clean form. Paths that differ (empty,
+// ".", ".." or doubled-slash segments, trailing slash) could name a different item than the
+// one the caller meant, so they are refused rather than silently rewritten.
+func isCanonical(p string) bool { return p != "" && p == path.Clean(p) }
+
+// cleanPaths returns ps if every entry is a canonical, non-root path.
 func cleanPaths(ps []string) ([]string, error) {
 	if len(ps) == 0 {
 		return nil, ErrNoSources
@@ -407,11 +421,13 @@ func cleanPaths(ps []string) ([]string, error) {
 		if p == "" {
 			return nil, fmt.Errorf("%w: empty path", ErrInvalid)
 		}
-		c := path.Clean(p)
-		if path.Dir(c) == c {
+		if !isCanonical(p) {
+			return nil, fmt.Errorf("%w: %q is not a clean path", ErrInvalid, p)
+		}
+		if path.Dir(p) == p {
 			return nil, fmt.Errorf("%w: %q is a root", ErrInvalid, p)
 		}
-		out[i] = c
+		out[i] = p
 	}
 	return out, nil
 }

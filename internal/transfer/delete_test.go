@@ -214,11 +214,15 @@ func TestDeleteRequestValidation(t *testing.T) {
 	t.Parallel()
 	h := newHarness(t)
 	for name, req := range map[string]DeleteRequest{
-		"no paths":     {Conn: "a"},
-		"empty path":   {Conn: "a", Paths: []string{""}},
-		"root":         {Conn: "a", Paths: []string{"/"}},
-		"normalized":   {Conn: "a", Paths: []string{"/d/.."}},
-		"unknown conn": {Conn: "zzz", Paths: []string{"/d"}},
+		"no paths":       {Conn: "a"},
+		"empty path":     {Conn: "a", Paths: []string{""}},
+		"root":           {Conn: "a", Paths: []string{"/"}},
+		"normalized":     {Conn: "a", Paths: []string{"/d/.."}},
+		"trailing slash": {Conn: "a", Paths: []string{"/d/"}},
+		"empty segment":  {Conn: "a", Paths: []string{"/a//d"}},
+		"dot segment":    {Conn: "a", Paths: []string{"/a/./d"}},
+		"dotdot inside":  {Conn: "a", Paths: []string{"/a/b/../d"}},
+		"unknown conn":   {Conn: "zzz", Paths: []string{"/d"}},
 	} {
 		if _, err := h.e.Delete(req); err == nil {
 			t.Errorf("%s: Delete succeeded", name)

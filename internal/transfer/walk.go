@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"path"
 	"slices"
+	"strings"
 
 	"github.com/w33ble/portunus/internal/prompt"
 	"github.com/w33ble/portunus/internal/vfs"
@@ -68,6 +69,15 @@ type copyWalker struct {
 	stack     []walkItem
 }
 
+// key is the name under which conflicts and duplicate sources are matched: folded to lower
+// case when the destination treats names case-insensitively.
+func (w *copyWalker) key(name string) string {
+	if vfs.IsCaseInsensitive(w.j.dst) {
+		return strings.ToLower(name)
+	}
+	return name
+}
+
 func (w *copyWalker) run() {
 	for len(w.stack) > 0 && w.ctx.Err() == nil {
 		it := w.stack[len(w.stack)-1]
@@ -100,11 +110,11 @@ func (w *copyWalker) root(sources []string) {
 			continue
 		}
 		w.e.firstSourceKnown(w.j, src, ent)
-		if _, dup := seen[name]; dup {
+		if _, dup := seen[w.key(name)]; dup {
 			w.fail(taskFile, src, dst, fmt.Errorf("another source is also named %q", name))
 			continue
 		}
-		seen[name] = struct{}{}
+		seen[w.key(name)] = struct{}{}
 		ent.Name, ent.Path = name, src
 		if err := w.entry(src, ent, w.j.dstDir, existing, &found); err != nil {
 			break
@@ -170,7 +180,7 @@ func (w *copyWalker) loadDst(dir string) (map[string]vfs.Entry, error) {
 	existing := map[string]vfs.Entry{}
 	err := w.j.dst.List(w.ctx, dir, func(page []vfs.Entry) error {
 		for _, ent := range page {
-			existing[ent.Name] = ent
+			existing[w.key(ent.Name)] = ent
 		}
 		return nil
 	})
@@ -193,7 +203,7 @@ func (w *copyWalker) entry(src string, ent vfs.Entry, dstDir string, existing ma
 		return nil
 	}
 	dst := path.Join(dstDir, ent.Name)
-	old, exists := existing[ent.Name]
+	old, exists := existing[w.key(ent.Name)]
 	switch classify(ent) {
 	case classLinkedDir, classSpecial:
 		w.skip(taskFile, src, dst)

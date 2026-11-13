@@ -63,6 +63,7 @@ type fakeFS struct {
 	readerWriterTo   bool
 	writerReaderFrom bool
 	lenientCommit    bool // Commit skips the Written()==Size check
+	caseInsensitive  bool
 
 	listCalls  map[string]int
 	statCalls  map[string]int
@@ -663,3 +664,5 @@ func (f *fakeFS) Rename(ctx context.Context, from, to string) error {
 	delete(f.nodes, from)
 	return nil
 }
+
+func (f *fakeFS) CaseInsensitive() bool { return f.caseInsensitive }

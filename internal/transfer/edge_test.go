@@ -117,3 +117,46 @@ func TestSkippingEveryConflictWithoutAnyTaskStartedReportsSkipped(t *testing.T) 
 		t.Fatalf("view = %+v", v)
 	}
 }
+
+var hostileNames = []string{"", ".", "..", "a/b", "../x", "n\x00ul"}
+
+func TestCopyWalkerRefusesHostileChildNames(t *testing.T) {
+	t.Parallel()
+	for _, name := range hostileNames {
+		h := newHarness(t)
+		h.fs["a"].addFile("/src/d/ok", "ok")
+		h.fs["a"].addEntry("/src/d", vfs.Entry{Name: name, Path: "/src/d/" + name, Size: 1, Mode: 0o644})
+		v := h.waitFinal(h.copyJob("a", []string{"/src/d"}, "b", "/dst", PolicyOverwrite))
+		if v.FailedFiles != 1 {
+			t.Errorf("name %q: failed files = %d, want 1", name, v.FailedFiles)
+		}
+		wantContent(t, h.fs["b"], "/dst/d/ok", "ok")
+		for _, p := range []string{"/dst", "/dst/d", "/dst/d/ok"} {
+			if !h.fs["b"].exists(p) {
+				t.Errorf("name %q: %s missing", name, p)
+			}
+		}
+		if h.fs["b"].exists("/x") || h.fs["b"].exists("/dst/x") {
+			t.Errorf("name %q escaped the destination", name)
+		}
+	}
+}
+
+func TestDeleteWalkerRefusesHostileChildNamesOfRoot(t *testing.T) {
+	t.Parallel()
+	for _, name := range hostileNames {
+		h := newHarness(t)
+		h.fs["a"].addFile("/keep/sibling", "s").addFile("/d/ok", "ok")
+		h.fs["a"].addEntry("/d", vfs.Entry{Name: name, Path: "/d/" + name, Mode: 0o644})
+		h.waitFinal(h.deleteJob("a", "/d"))
+		if !h.fs["a"].exists("/keep/sibling") {
+			t.Errorf("name %q: delete reached outside the selected directory", name)
+		}
+		if h.fs["a"].exists("/d/ok") {
+			t.Errorf("name %q: valid child not deleted", name)
+		}
+		if !h.fs["a"].exists("/d") {
+			t.Errorf("name %q: directory removed despite refused child", name)
+		}
+	}
+}

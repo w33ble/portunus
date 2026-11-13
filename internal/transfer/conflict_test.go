@@ -189,3 +189,57 @@ func TestAskPolicyWithoutAskerFailsConflicts(t *testing.T) {
 	}
 	wantContent(t, h.fs["b"], "/dst/c000", "old")
 }
+
+func TestCaseInsensitiveDestinationPromptsOnDifferentlyCasedName(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	h.fs["b"].caseInsensitive = true
+	h.fs["a"].addFile("/src/README.md", "new")
+	h.fs["b"].addFile("/dst/Readme.md", "old")
+	h.asker.set(answerWith(prompt.ConflictAnswer{Action: prompt.ConflictSkip}))
+	h.waitFinal(h.copyJob("a", []string{"/src/README.md"}, "b", "/dst", PolicyAsk))
+	if h.asker.callCount() != 1 {
+		t.Fatalf("conflict prompts = %d, want 1", h.asker.callCount())
+	}
+	wantContent(t, h.fs["b"], "/dst/Readme.md", "old")
+}
+
+func TestCaseSensitiveDestinationDoesNotConflictOnDifferentCase(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	h.fs["a"].addFile("/src/README.md", "new")
+	h.fs["b"].addFile("/dst/Readme.md", "old")
+	h.waitFinal(h.copyJob("a", []string{"/src/README.md"}, "b", "/dst", PolicyAsk))
+	if h.asker.callCount() != 0 {
+		t.Fatalf("unexpected conflict prompt")
+	}
+	wantContent(t, h.fs["b"], "/dst/Readme.md", "old")
+	wantContent(t, h.fs["b"], "/dst/README.md", "new")
+}
+
+func TestCaseInsensitiveDestinationPromptsInsideCopiedDirectory(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	h.fs["b"].caseInsensitive = true
+	h.fs["a"].addFile("/src/d/Notes.TXT", "new")
+	h.fs["b"].addFile("/dst/d/notes.txt", "old")
+	h.asker.set(answerWith(prompt.ConflictAnswer{Action: prompt.ConflictSkip}))
+	h.waitFinal(h.copyJob("a", []string{"/src/d"}, "b", "/dst", PolicyAsk))
+	if h.asker.callCount() != 1 {
+		t.Fatalf("conflict prompts = %d, want 1", h.asker.callCount())
+	}
+	wantContent(t, h.fs["b"], "/dst/d/notes.txt", "old")
+}
+
+func TestCaseInsensitiveDestinationRejectsSourcesThatCollide(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t)
+	h.fs["b"].caseInsensitive = true
+	h.fs["a"].addFile("/s1/README.md", "one").addFile("/s2/Readme.md", "two")
+	h.fs["b"].addDir("/dst")
+	v := h.waitFinal(h.copyJob("a", []string{"/s1/README.md", "/s2/Readme.md"}, "b", "/dst", PolicyOverwrite))
+	if v.State == StateDone {
+		t.Fatalf("job finished cleanly; the colliding source must fail, got %+v", v)
+	}
+	wantContent(t, h.fs["b"], "/dst/README.md", "one")
+}
