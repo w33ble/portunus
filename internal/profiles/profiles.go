@@ -146,6 +146,9 @@ func (s *Store) S3Config(id string) (s3fs.Config, error) {
 	if err != nil {
 		return s3fs.Config{}, fmt.Errorf("profiles: load secret: %w", err)
 	}
+	if p.AccessKeyID != "" && p.Profile == "" && secret == "" {
+		return s3fs.Config{}, fmt.Errorf("profiles: %s: secret access key is missing from the keychain; re-enter it", id)
+	}
 	return s3fs.Config{
 		Profile:         p.Profile,
 		AccessKeyID:     p.AccessKeyID,

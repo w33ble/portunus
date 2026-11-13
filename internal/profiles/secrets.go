@@ -90,11 +90,7 @@ func (f *FallbackStore) Get(key string) (string, error) {
 	if v, _ := f.mem.Get(key); v != "" {
 		return v, nil
 	}
-	// An unavailable keychain behaves like a missing secret.
-	if v, err := f.primary.Get(key); err == nil {
-		return v, nil
-	}
-	return "", nil
+	return f.primary.Get(key)
 }
 
 func (f *FallbackStore) Set(key, value string) error {

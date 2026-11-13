@@ -63,8 +63,11 @@ var _ vfs.FS = (*FS)(nil)
 // New builds an FS. It performs no network calls.
 func New(ctx context.Context, cfg Config) (*FS, error) {
 	var base aws.Config
+	if cfg.AccessKeyID != "" && cfg.SecretAccessKey == "" && cfg.Profile == "" {
+		return nil, errors.New("s3: access key ID set without a secret access key")
+	}
 	static := cfg.AccessKeyID != "" && cfg.SecretAccessKey != ""
-	if cfg.Profile != "" || !static {
+	if cfg.Profile != "" || cfg.AccessKeyID == "" {
 		opts := []func(*config.LoadOptions) error{}
 		if cfg.Profile != "" {
 			opts = append(opts, config.WithSharedConfigProfile(cfg.Profile))
@@ -178,15 +181,26 @@ func (f *FS) parse(p string) (loc, error) {
 	if !strings.HasPrefix(p, "/") {
 		return loc{}, fmt.Errorf("s3 path %q is not absolute", p)
 	}
-	p = path.Clean(p)
 	if p == "/" {
 		return loc{}, nil
 	}
+	for i, seg := range strings.Split(strings.TrimSuffix(p[1:], "/"), "/") {
+		if validName(seg) {
+			continue
+		}
+		return loc{}, fmt.Errorf("s3 path %q: invalid segment %d %q", p, i, seg)
+	}
+	p = strings.TrimSuffix(p, "/")
 	b, k, _ := strings.Cut(p[1:], "/")
 	if f.cfg.Bucket != "" && b != f.cfg.Bucket {
 		return loc{}, fmt.Errorf("s3 path %q: bucket %q is not accessible: %w", p, b, vfs.ErrNotExist)
 	}
 	return loc{b, k}, nil
+}
+
+// validName reports whether s is usable as one path segment.
+func validName(s string) bool {
+	return s != "" && s != "." && s != ".." && !strings.Contains(s, "/")
 }
 
 func (l loc) path() string {
@@ -269,24 +283,7 @@ func (f *FS) List(ctx context.Context, dir string, page func([]vfs.Entry) error)
 			return fmt.Errorf("s3 list %s: %w", dir, vfs.ErrNotExist)
 		}
 		first = false
-		entries := make([]vfs.Entry, 0, len(out.Contents)+len(out.CommonPrefixes))
-		for _, cp := range out.CommonPrefixes {
-			name := strings.TrimSuffix(strings.TrimPrefix(aws.ToString(cp.Prefix), prefix), "/")
-			entries = append(entries, vfs.Entry{Name: name, Path: loc{l.bucket, prefix + name}.path(), IsDir: true})
-		}
-		for _, o := range out.Contents {
-			k := aws.ToString(o.Key)
-			if k == prefix {
-				continue // directory marker
-			}
-			name := strings.TrimPrefix(k, prefix)
-			entries = append(entries, vfs.Entry{
-				Name:    name,
-				Path:    loc{l.bucket, k}.path(),
-				Size:    aws.ToInt64(o.Size),
-				ModTime: aws.ToTime(o.LastModified),
-			})
-		}
+		entries := listEntries(l.bucket, prefix, out)
 		if len(entries) == 0 {
 			continue
 		}
@@ -295,6 +292,36 @@ func (f *FS) List(ctx context.Context, dir string, page func([]vfs.Entry) error)
 		}
 	}
 	return nil
+}
+
+// listEntries converts one listing page to entries, dropping keys whose derived name would
+// alias the parent or escape the directory (leading slash, double slash, dot segments).
+func listEntries(bucket, prefix string, out *s3.ListObjectsV2Output) []vfs.Entry {
+	entries := make([]vfs.Entry, 0, len(out.Contents)+len(out.CommonPrefixes))
+	for _, cp := range out.CommonPrefixes {
+		name := strings.TrimSuffix(strings.TrimPrefix(aws.ToString(cp.Prefix), prefix), "/")
+		if !validName(name) {
+			continue
+		}
+		entries = append(entries, vfs.Entry{Name: name, Path: loc{bucket, prefix + name}.path(), IsDir: true})
+	}
+	for _, o := range out.Contents {
+		k := aws.ToString(o.Key)
+		if k == prefix {
+			continue // directory marker
+		}
+		name := strings.TrimPrefix(k, prefix)
+		if !validName(name) {
+			continue
+		}
+		entries = append(entries, vfs.Entry{
+			Name:    name,
+			Path:    loc{bucket, k}.path(),
+			Size:    aws.ToInt64(o.Size),
+			ModTime: aws.ToTime(o.LastModified),
+		})
+	}
+	return entries
 }
 
 func (f *FS) listBuckets(ctx context.Context, page func([]vfs.Entry) error) error {

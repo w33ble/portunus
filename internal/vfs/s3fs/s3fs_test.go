@@ -9,9 +9,11 @@ import (
 	"math/rand/v2"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 
 	"github.com/w33ble/portunus/internal/vfs"
 	"github.com/w33ble/portunus/internal/vfs/vfstest"
@@ -309,18 +311,116 @@ func TestPartSizeFor(t *testing.T) {
 func TestParse(t *testing.T) {
 	f := &FS{}
 	for in, want := range map[string]loc{
-		"/":         {},
-		"/b":        {"b", ""},
-		"/b/":       {"b", ""},
-		"/b/k/../j": {"b", "j"},
-		"/b/a/b/c":  {"b", "a/b/c"},
+		"/":        {},
+		"/b":       {"b", ""},
+		"/b/":      {"b", ""},
+		"/b/a/b/c": {"b", "a/b/c"},
 	} {
 		got, err := f.parse(in)
 		if err != nil || got != want {
 			t.Errorf("parse(%q) = %+v, %v; want %+v", in, got, err, want)
 		}
 	}
+	for _, bad := range []string{"//x", "/b//x", "/b/a/../x", "/b/./x", "/b/..", "/b/a//", "/..", "/b//"} {
+		if got, err := f.parse(bad); err == nil {
+			t.Errorf("parse(%q) = %+v, want error", bad, got)
+		}
+	}
 	if _, err := f.parse("rel"); err == nil {
 		t.Error("relative path accepted")
+	}
+}
+
+func TestListEntriesSkipsAliasingKeys(t *testing.T) {
+	keys := func(ks ...string) []s3types.Object {
+		var o []s3types.Object
+		for _, k := range ks {
+			o = append(o, s3types.Object{Key: aws.String(k)})
+		}
+		return o
+	}
+	prefixes := func(ps ...string) []s3types.CommonPrefix {
+		var o []s3types.CommonPrefix
+		for _, p := range ps {
+			o = append(o, s3types.CommonPrefix{Prefix: aws.String(p)})
+		}
+		return o
+	}
+	out := &s3.ListObjectsV2Output{
+		Contents:       keys("/x", "ok", "../y", "./z", "a//x", "a/b"),
+		CommonPrefixes: prefixes("/", "//", "../", "./", "dir/"),
+	}
+	var names []string
+	for _, e := range listEntries("b", "", out) {
+		names = append(names, e.Name)
+	}
+	if want := []string{"dir", "ok"}; !slices.Equal(names, want) {
+		t.Fatalf("root names = %v, want %v", names, want)
+	}
+	out = &s3.ListObjectsV2Output{
+		Contents:       keys("p/", "p//", "p/./", "p/..", "p/f"),
+		CommonPrefixes: prefixes("p//", "p/sub/"),
+	}
+	names = nil
+	for _, e := range listEntries("b", "p/", out) {
+		names = append(names, e.Name)
+	}
+	if want := []string{"sub", "f"}; !slices.Equal(names, want) {
+		t.Fatalf("p/ names = %v, want %v", names, want)
+	}
+}
+
+func TestAbortConcurrentWithWrite(t *testing.T) {
+	cfg := minioConfig()
+	cfg.PartSize = 5 << 20
+	f, root := newBucket(t, cfg)
+	ctx := context.Background()
+	chunk := randBytes(1 << 20)
+	for i := range 12 {
+		size := int64(40 << 20)
+		w, err := f.Create(ctx, root+"/race", vfs.CreateOpts{Size: size})
+		if err != nil {
+			t.Fatal(err)
+		}
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			for range 40 {
+				if _, err := w.Write(chunk); err != nil {
+					return
+				}
+			}
+		}()
+		time.Sleep(time.Duration(i*40) * time.Millisecond)
+		if err := w.Abort(); err != nil {
+			t.Fatalf("Abort: %v", err)
+		}
+		<-done
+		if _, err := w.Write(chunk); err == nil {
+			t.Fatal("Write succeeded after Abort")
+		}
+	}
+	if _, err := f.Stat(ctx, root+"/race"); !errors.Is(err, vfs.ErrNotExist) {
+		t.Fatalf("Stat after aborts = %v", err)
+	}
+	// A late flush can create an upload after the first listing; give Abort's cleanup a moment.
+	var n int
+	for range 20 {
+		if n = pendingUploads(t, f, root[1:]); n == 0 {
+			return
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+	t.Fatalf("%d uploads still pending after concurrent Aborts", n)
+}
+
+func TestNewRejectsStaticKeyWithoutSecret(t *testing.T) {
+	t.Setenv("AWS_ACCESS_KEY_ID", "ambient")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "ambient")
+	if _, err := New(context.Background(), Config{AccessKeyID: "AK"}); err == nil {
+		t.Fatal("New accepted a static key with no secret and would use ambient AWS credentials")
+	}
+	if _, err := New(context.Background(), Config{}); err != nil {
+		t.Fatalf("New with no keys: %v", err)
 	}
 }

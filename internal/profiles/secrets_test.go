@@ -16,8 +16,8 @@ func (brokenStore) Delete(string) error        { return errNoService }
 func TestFallbackKeepsSecretsForSessionWhenPrimaryFails(t *testing.T) {
 	f := WithFallback(brokenStore{})
 
-	if v, err := f.Get("k"); err != nil || v != "" {
-		t.Fatalf("Get on empty = %q, %v; want empty, nil", v, err)
+	if v, err := f.Get("k"); !errors.Is(err, errNoService) || v != "" {
+		t.Fatalf("Get on empty with broken primary = %q, %v; want the keychain error", v, err)
 	}
 	if err := f.Set("k", "secret"); err != nil {
 		t.Fatalf("Set = %v, want fallback to memory", err)
@@ -31,8 +31,8 @@ func TestFallbackKeepsSecretsForSessionWhenPrimaryFails(t *testing.T) {
 	if err := f.Delete("k"); err != nil {
 		t.Fatalf("Delete = %v", err)
 	}
-	if v, _ := f.Get("k"); v != "" {
-		t.Fatalf("Get after delete = %q", v)
+	if v, err := f.Get("k"); v != "" || !errors.Is(err, errNoService) {
+		t.Fatalf("Get after delete = %q, %v", v, err)
 	}
 }
 

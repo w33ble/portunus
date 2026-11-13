@@ -95,14 +95,29 @@ type writer struct {
 
 	cur      []byte
 	written  int64
-	uploadID *string
 	nextPart int32
-	finished bool
 
-	wg    sync.WaitGroup
-	mu    sync.Mutex
-	parts []types.CompletedPart
-	err   error
+	wg sync.WaitGroup
+	// mu guards uploadID, finished, parts and err; Abort may run on another goroutine.
+	mu       sync.Mutex
+	uploadID *string
+	finished bool
+	parts    []types.CompletedPart
+	err      error
+}
+
+var errWriterAborted = errors.New("s3 write: aborted")
+
+func (w *writer) isFinished() bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.finished
+}
+
+func (w *writer) currentUploadID() *string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.uploadID
 }
 
 func (w *writer) Written() int64 { return w.written }
@@ -148,7 +163,7 @@ func (w *writer) take() error {
 }
 
 func (w *writer) Write(p []byte) (int, error) {
-	if w.finished {
+	if w.isFinished() {
 		return 0, errors.New("s3 write: writer already finished")
 	}
 	total := 0
@@ -177,7 +192,7 @@ func (w *writer) Write(p []byte) (int, error) {
 
 // ReadFrom reads straight into part buffers, skipping the intermediate io.Copy buffer.
 func (w *writer) ReadFrom(r io.Reader) (int64, error) {
-	if w.finished {
+	if w.isFinished() {
 		return 0, errors.New("s3 write: writer already finished")
 	}
 	var total int64
@@ -221,13 +236,20 @@ func (w *writer) startUpload() error {
 		w.fail(err)
 		return err
 	}
+	w.mu.Lock()
+	if w.finished {
+		w.mu.Unlock()
+		_ = w.abortUpload(out.UploadId)
+		return errWriterAborted
+	}
 	w.uploadID = out.UploadId
+	w.mu.Unlock()
 	return nil
 }
 
 // flush hands the current buffer to an uploader goroutine.
 func (w *writer) flush() error {
-	if w.uploadID == nil {
+	if w.currentUploadID() == nil {
 		if err := w.startUpload(); err != nil {
 			return err
 		}
@@ -237,21 +259,28 @@ func (w *writer) flush() error {
 		w.fail(err)
 		return err
 	}
+	w.mu.Lock()
+	if w.finished {
+		w.mu.Unlock()
+		return errWriterAborted
+	}
 	w.nextPart++
 	buf := w.cur
 	w.cur = nil
 	w.wg.Add(1)
-	go w.uploadPart(w.nextPart, buf)
+	id := w.uploadID
+	w.mu.Unlock()
+	go w.uploadPart(w.nextPart, id, buf)
 	return nil
 }
 
-func (w *writer) uploadPart(num int32, buf []byte) {
+func (w *writer) uploadPart(num int32, id *string, buf []byte) {
 	defer w.wg.Done()
 	defer func() { w.free <- buf }()
 	out, err := w.client.UploadPart(w.ctx, &s3.UploadPartInput{
 		Bucket:        aws.String(w.loc.bucket),
 		Key:           aws.String(w.loc.key),
-		UploadId:      w.uploadID,
+		UploadId:      id,
 		PartNumber:    aws.Int32(num),
 		Body:          bytes.NewReader(buf),
 		ContentLength: aws.Int64(int64(len(buf))),
@@ -274,14 +303,16 @@ func (w *writer) uploadPart(num int32, buf []byte) {
 }
 
 func (w *writer) Commit() error {
-	if w.finished {
+	if w.isFinished() {
 		return errors.New("s3 commit: writer already finished")
 	}
 	if err := w.commit(); err != nil {
 		_ = w.Abort()
 		return err
 	}
+	w.mu.Lock()
 	w.finished = true
+	w.mu.Unlock()
 	w.cancel()
 	return nil
 }
@@ -293,7 +324,7 @@ func (w *writer) commit() error {
 	if err := w.failure(); err != nil {
 		return err
 	}
-	if w.uploadID == nil {
+	if w.currentUploadID() == nil {
 		_, err := w.client.PutObject(w.ctx, &s3.PutObjectInput{
 			Bucket:        aws.String(w.loc.bucket),
 			Key:           aws.String(w.loc.key),
@@ -315,29 +346,41 @@ func (w *writer) commit() error {
 	_, err := w.client.CompleteMultipartUpload(w.ctx, &s3.CompleteMultipartUploadInput{
 		Bucket:          aws.String(w.loc.bucket),
 		Key:             aws.String(w.loc.key),
-		UploadId:        w.uploadID,
+		UploadId:        w.currentUploadID(),
 		MultipartUpload: &types.CompletedMultipartUpload{Parts: w.parts},
 	})
 	return mapErr("complete", w.loc.path(), err)
 }
 
-// Abort stops uploads and discards the multipart upload. Safe to call after a failed Commit.
+// Abort stops uploads and discards the multipart upload. Safe to call after a failed Commit
+// and from another goroutine while Write, ReadFrom or Commit is running.
 func (w *writer) Abort() error {
+	w.mu.Lock()
 	if w.finished {
+		w.mu.Unlock()
 		return nil
 	}
 	w.finished = true
+	if w.err == nil {
+		w.err = errWriterAborted
+	}
+	id := w.uploadID
+	w.mu.Unlock()
 	w.cancel()
 	w.wg.Wait()
-	if w.uploadID == nil {
+	if id == nil {
 		return nil
 	}
+	return w.abortUpload(id)
+}
+
+func (w *writer) abortUpload(id *string) error {
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(w.parent), abortTimeout)
 	defer cancel()
 	_, err := w.client.AbortMultipartUpload(ctx, &s3.AbortMultipartUploadInput{
 		Bucket:   aws.String(w.loc.bucket),
 		Key:      aws.String(w.loc.key),
-		UploadId: w.uploadID,
+		UploadId: id,
 	})
 	return mapErr("abort", w.loc.path(), err)
 }

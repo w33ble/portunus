@@ -139,3 +139,32 @@ func TestMemorySecretMissingIsEmpty(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestS3ConfigErrorsWhenStaticSecretUnavailable(t *testing.T) {
+	for name, store := range map[string]SecretStore{
+		"missing": Memory(),
+		"broken":  WithFallback(brokenStore{}),
+	} {
+		s, err := Open(t.TempDir(), store)
+		if err != nil {
+			t.Fatal(err)
+		}
+		p, err := s.Save(S3Profile{Name: "n", AccessKeyID: "AK"}, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg, err := s.S3Config(p.ID); err == nil {
+			t.Errorf("%s: S3Config = %+v, want error", name, cfg)
+		}
+	}
+	s, _ := Open(t.TempDir(), WithFallback(brokenStore{}))
+	p, _ := s.Save(S3Profile{Name: "n", AccessKeyID: "AK"}, "sess")
+	if cfg, err := s.S3Config(p.ID); err != nil || cfg.SecretAccessKey != "sess" {
+		t.Errorf("session secret: %+v, %v", cfg, err)
+	}
+	s, _ = Open(t.TempDir(), Memory())
+	p, _ = s.Save(S3Profile{Name: "ambient"}, "")
+	if _, err := s.S3Config(p.ID); err != nil {
+		t.Errorf("no-key profile: %v", err)
+	}
+}
