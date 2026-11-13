@@ -43,6 +43,7 @@ export function JobRow({ job }: { job: JobView }) {
   const [open, setOpen] = useState(false);
   const cancel = useTransfers((s) => s.cancel);
   const retry = useTransfers((s) => s.retry);
+  const resume = useTransfers((s) => s.resume);
 
   const state = job.state;
   const active = isActiveState(state);
@@ -78,7 +79,13 @@ export function JobRow({ job }: { job: JobView }) {
             Cancel
           </button>
         )}
-        {!active && job.failedFiles > 0 && (
+        {state === State.StateCanceled && (
+          <button type="button" className={controls.button} onClick={() => void resume(job.id)}>
+            <Icon name="retry" size={12} />
+            Resume
+          </button>
+        )}
+        {state === State.StateFailed && job.failedFiles > 0 && (
           <button type="button" className={controls.button} onClick={() => void retry(job.id)}>
             <Icon name="retry" size={12} />
             Retry failed
