@@ -14,12 +14,13 @@
   outline: none;
 }
 
-/* Panes get script focus on launch, which counts as :focus-visible; only ring it for keyboard users. */
+/* Panes get script focus on launch, which counts as :focus-visible; only ring it for keyboard users,
+   and only until there's a cursor row, which then shows focus itself. */
 .scroller:focus-visible {
   box-shadow: none;
 }
 
-:root[data-modality='keyboard'] .scroller:focus-visible {
+:root[data-modality='keyboard'] .scroller:focus-visible:not(:has([data-cursor='true'])) {
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
