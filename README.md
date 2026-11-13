@@ -64,9 +64,31 @@ Go lint and tests run with the `purego` build tag. That's Wails' CGO-free backen
 GitHub Actions (`.github/workflows`):
 
 - `ci.yml` runs on every pull request and every push to `main`: `mise run check`, the race detector, gohawk, and a native cgo build on Ubuntu (GTK4/WebKitGTK 6). macOS builds aren't in CI; they're checked locally.
-- `e2e.yml` runs the end-to-end suite on pushes to `main` and on manual dispatch. It's also callable via `workflow_call`, so a release workflow can require it. Screenshots are uploaded as an artifact.
+- `e2e.yml` runs the end-to-end suite on pushes to `main` and on manual dispatch. Screenshots are uploaded as an artifact.
+- `release.yml` cuts releases (see below). Both `ci.yml` and `e2e.yml` are reusable (`workflow_call`), and the release requires both to pass.
 
 CI sets `PORTUNUS_REQUIRE_INTEGRATION=1`, which turns integration-test skips (missing sshd, ssh, or Docker) into failures.
+
+### Versions and releases
+
+Every build is stamped with a version: `portunus --version`, the About box and Settings all show it.
+
+- **Dev builds** (`mise run dev`, `mise run build`, `mise run package`) are `dev-<commit>`, with `-dirty` when the working tree has uncommitted changes. Linux packages use `0.0.0-dev+<commit>` so they still sort.
+- **Releases** set `PORTUNUS_VERSION` (e.g. `1.2.0`). The release workflow does this from the tag. The version goes into the binary, the macOS `Info.plist`, and the `.deb`/`.rpm` metadata. `build/config.yml`'s `version` is only a template default.
+
+To cut a release, push a semver tag:
+
+```sh
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+`release.yml` runs CI and e2e, then builds:
+
+- macOS: a universal `.app` (arm64 + x86_64), as a `.zip` and a `.dmg`. Ad-hoc signed only, so users approve the first launch in System Settings.
+- Linux: `.deb`, `.rpm` and `.tar.gz` for amd64, plus arm64 when the repo is public (hosted arm64 runners are free only for public repos).
+- `THIRD_PARTY_NOTICES.md` (`build/release/third-party-notices.sh`), which is also bundled in the `.app` and the Linux packages, and `SHA256SUMS`.
+
+It then opens a **draft** GitHub Release with generated notes, for you to review and publish. Tags with a pre-release suffix (`v0.2.0-rc.1`) are marked as pre-releases. For a dry run, use Actions → Release → Run workflow with a version: everything is built and uploaded as workflow artifacts, and nothing is published.
 
 ### Environment
 

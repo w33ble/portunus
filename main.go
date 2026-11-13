@@ -2,8 +2,10 @@ package main
 
 import (
 	"embed"
+	"fmt"
 	"log"
 	"log/slog"
+	"os"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -12,6 +14,7 @@ import (
 	"github.com/w33ble/portunus/internal/profiles"
 	"github.com/w33ble/portunus/internal/services"
 	"github.com/w33ble/portunus/internal/state"
+	"github.com/w33ble/portunus/internal/version"
 )
 
 //go:embed all:frontend/dist
@@ -20,6 +23,12 @@ var assets embed.FS
 const appID = "com.w33ble.portunus"
 
 func main() {
+	if len(os.Args) == 2 && (os.Args[1] == "--version" || os.Args[1] == "-v") {
+		v := version.Get()
+		fmt.Printf("portunus %s (commit %s, built %s, %s)\n", v.Version, v.Commit, v.Date, v.Go)
+		return
+	}
+
 	configDir, err := appdirs.ConfigDir()
 	if err != nil {
 		log.Fatal(err)
@@ -49,7 +58,7 @@ func main() {
 
 	app = application.New(application.Options{
 		Name:         "Portunus",
-		Description:  "SFTP and S3 file transfer client",
+		Description:  "SFTP and S3 file transfer client\nVersion " + version.Get().Version,
 		Services:     core.Services(),
 		MarshalError: services.MarshalError,
 		Assets: application.AssetOptions{

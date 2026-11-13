@@ -10,3 +10,4 @@ frontend/bindings
 .env.*
 e2e/out
 e2e/node_modules
+THIRD_PARTY_NOTICES.md

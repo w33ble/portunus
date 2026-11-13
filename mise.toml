@@ -2,6 +2,7 @@
 age = "latest"
 fnox = { version = "latest", workflow = "release.yml" }
 go = "1.27"
+"go:github.com/google/go-licenses/v2" = "2.0.1"
 "go:github.com/kojah/gohawk" = "0.7.2"
 "go:github.com/wailsapp/wails/v3/cmd/wails3" = "v3.1.0"
 golangci-lint = "2.15"

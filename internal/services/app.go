@@ -112,6 +112,7 @@ func (a *App) Services() []application.Service {
 		application.NewService(&TransferService{app: a}),
 		application.NewService(&PromptService{app: a}),
 		application.NewService(&SettingsService{app: a}),
+		application.NewService(&VersionService{}),
 	}
 }
 
