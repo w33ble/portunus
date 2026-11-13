@@ -48,21 +48,17 @@ jobs:
       - uses: ./.github/actions/setup
       - run: mise run lint:gohawk
 
+  # The shipped cgo build; check/test only compile the purego backend.
+  # Linux only: macOS builds are verified locally (macOS runner minutes are scarce on the free tier).
   build:
-    name: Native build (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, ubuntu-24.04]
-    runs-on: ${{ matrix.os }}
+    name: Native build (Linux)
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - name: GTK4 and WebKitGTK headers
-        if: runner.os == 'Linux'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev
-      # The shipped cgo build; check/test only compile the purego backend.
       - run: mise run build
