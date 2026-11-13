@@ -12,11 +12,13 @@ trap 'rm -rf "$TMP"' EXIT
 
 # Apple's macOS icon grid: an 824px rounded-rect plate centered on a 1024px canvas.
 PLATE=824 RADIUS=185 OFFSET=100 ART=640
+# Tile background, top to bottom. Override to preview alternatives without editing the script.
+TILE_TOP="${TILE_TOP:-#1f3c66}" TILE_BOTTOM="${TILE_BOTTOM:-#0c1a33}"
 
 magick -size ${PLATE}x${PLATE} xc:none -fill white \
   -draw "roundrectangle 0,0 $((PLATE - 1)),$((PLATE - 1)) $RADIUS,$RADIUS" "$TMP/mask.png"
 
-magick -size ${PLATE}x${PLATE} gradient:'#ffffff-#e4ecf5' "$TMP/mask.png" \
+magick -size ${PLATE}x${PLATE} gradient:"$TILE_TOP-$TILE_BOTTOM" "$TMP/mask.png" \
   -compose CopyOpacity -composite "$TMP/plate.png"
 
 # Artwork sits slightly below center: the pediment is visually heavier than the base.
