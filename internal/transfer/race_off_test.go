@@ -2,4 +2,6 @@
 
 package transfer
 
-const raceEnabled = false
+import "testing"
+
+func skipUnderRace(*testing.T) {}

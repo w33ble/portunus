@@ -51,6 +51,7 @@ func slowLink(t *testing.T) func() *sftpfs.FS {
 
 func TestCopyThroughputOverHighLatencyLink(t *testing.T) {
 	t.Parallel()
+	skipUnderRace(t)
 	const size = 32 << 20
 	connect := slowLink(t)
 	local := localfs.New()
@@ -70,12 +71,7 @@ func TestCopyThroughputOverHighLatencyLink(t *testing.T) {
 		o.Resolve = func(id string) (vfs.FS, error) { return conns[id], nil }
 	})
 
-	// The race detector slows encryption enough to cap the loopback proxy well below the
-	// plan's 10 MB/s; the per-chunk round-trip bug measures ~0.5 MB/s, so 2-4 still catches it.
 	upMin, hopMin := 10.0, 5.0
-	if raceEnabled {
-		upMin, hopMin = 4, 2
-	}
 	run := func(name, srcConn, src, dstConn, dstDir string, minMBps float64) {
 		start := time.Now()
 		id := h.copyJob(srcConn, []string{src}, dstConn, dstDir, PolicyAsk)

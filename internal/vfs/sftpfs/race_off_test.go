@@ -2,4 +2,6 @@
 
 package sftpfs_test
 
-const raceEnabled = false
+import "testing"
+
+func skipUnderRace(*testing.T) {}

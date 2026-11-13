@@ -54,7 +54,7 @@ run = "gohawk -tags purego ./..."
 
 [tasks.lint]
 description = "Lint Go and frontend"
-depends = ["frontend:install"]
+depends = ["frontend:build"] # main.go embeds frontend/dist, so Go typechecking needs it
 run = ["golangci-lint run ./...", "pnpm --dir frontend lint"]
 
 [tasks.fmt]
