@@ -63,7 +63,7 @@ func TestSaveNormalizesLimits(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.GlobalTransfers != 1 || got.PerConnectionTransfers != 1 {
+	if got.GlobalTransfers != 4 || got.PerConnectionTransfers != 2 {
 		t.Fatalf("got %+v, want invalid limits replaced with defaults", got)
 	}
 
@@ -87,7 +87,7 @@ func TestOpenKeepsDefaultsForMissingFields(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := s.Get()
-	if !got.ShowHidden || !got.LoadAppleKeychain || got.GlobalTransfers != 1 {
+	if !got.ShowHidden || !got.LoadAppleKeychain || got.GlobalTransfers != 4 {
 		t.Fatalf("got %+v, want showHidden plus defaults", got)
 	}
 }

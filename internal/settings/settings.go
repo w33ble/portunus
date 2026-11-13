@@ -26,11 +26,10 @@ type Settings struct {
 }
 
 // Defaults are applied for missing or invalid fields.
-// Concurrency ships serial (M3); M3.1 raises these.
 func Defaults() Settings {
 	return Settings{
-		GlobalTransfers:        1,
-		PerConnectionTransfers: 1,
+		GlobalTransfers:        4,
+		PerConnectionTransfers: 2,
 		LoadAppleKeychain:      true,
 		ShowHidden:             false,
 	}
