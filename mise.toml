@@ -6,6 +6,8 @@ go = "1.27"
 golangci-lint = "2.15"
 node = "24"
 pnpm = "12"
+# C toolchain for `go test -race` on machines without gcc/clang (race needs cgo).
+zig = "0.15"
 
 # Wails needs cgo or the CGO-free `purego` backend; purego keeps Go checks runnable without GTK/WebKit headers.
 [tasks.dev]
@@ -39,6 +41,12 @@ run = "pnpm --dir frontend build"
 description = "Run Go tests"
 depends = ["frontend:build"]
 run = "go test -tags purego ./..."
+
+[tasks."test:race"]
+description = "Run Go tests with the race detector (zig cc as the C compiler)"
+depends = ["frontend:build"]
+env = { CGO_ENABLED = "1", CC = "zig cc" }
+run = "go test -tags purego -race ./..."
 
 [tasks.lint]
 description = "Lint Go and frontend"
