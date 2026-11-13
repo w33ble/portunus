@@ -131,7 +131,10 @@ func TestTempFileLifecycle(t *testing.T) {
 	f := newRig(t).connect(t)
 	dir := t.TempDir()
 	target := filepath.Join(dir, "doc.txt")
-	tmp := filepath.Join(dir, ".doc.txt.portunus-tmp")
+	tmps := func() []string {
+		m, _ := filepath.Glob(filepath.Join(dir, ".doc.txt.*.portunus-tmp"))
+		return m
+	}
 
 	w, err := f.Create(t.Context(), target, vfs.CreateOpts{Size: 5})
 	if err != nil {
@@ -140,8 +143,8 @@ func TestTempFileLifecycle(t *testing.T) {
 	if _, err := w.Write([]byte("hello")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(tmp); err != nil {
-		t.Fatalf("staging file missing during write: %v", err)
+	if len(tmps()) != 1 {
+		t.Fatalf("staging files during write = %v, want exactly one", tmps())
 	}
 	if _, err := os.Stat(target); err == nil {
 		t.Fatal("target visible before Commit")
@@ -149,8 +152,8 @@ func TestTempFileLifecycle(t *testing.T) {
 	if err := w.Commit(); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(tmp); err == nil {
-		t.Fatal("staging file left after Commit")
+	if len(tmps()) != 0 {
+		t.Fatalf("staging file left after Commit: %v", tmps())
 	}
 	if b, _ := os.ReadFile(target); string(b) != "hello" {
 		t.Fatalf("target = %q", b)
@@ -426,4 +429,26 @@ func (b *blockingWriterFast) Write(p []byte) (int, error) {
 		close(b.started)
 	}
 	return len(p), nil
+}
+
+func TestSymlinkEntryModeFromTarget(t *testing.T) {
+	t.Parallel()
+	f := newRig(t).connect(t)
+	dir := t.TempDir()
+	real := filepath.Join(dir, "real")
+	writeLocal(t, real, []byte("x"))
+	if err := os.Chmod(real, 0o640); err != nil { //nolint:gosec // test fixture
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "link")
+	if err := os.Symlink("real", link); err != nil {
+		t.Fatal(err)
+	}
+	e, err := f.Stat(t.Context(), link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e.Mode != 0o640 {
+		t.Fatalf("link entry Mode = %v, want target's 0640", e.Mode)
+	}
 }

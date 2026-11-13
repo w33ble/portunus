@@ -1,6 +1,7 @@
 package localfs_test
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -57,5 +58,42 @@ func TestCommitWritesThroughSymlink(t *testing.T) {
 		if li, _ := os.Stat(real); li.Mode().Perm() != 0o640 {
 			t.Fatalf("mode = %v, want 0640 preserved", li.Mode().Perm())
 		}
+	}
+}
+
+func TestCaseInsensitiveByPlatform(t *testing.T) {
+	want := runtime.GOOS == "darwin" || runtime.GOOS == "windows"
+	if got := vfs.IsCaseInsensitive(localfs.New()); got != want {
+		t.Fatalf("IsCaseInsensitive = %v on %s, want %v", got, runtime.GOOS, want)
+	}
+}
+
+// A rename whose target resolves to the source itself (foo -> Foo on a case-insensitive
+// volume) must not be reported as an existing-target conflict. A hard link reproduces
+// the same-file condition on any platform.
+func TestRenameOntoSameFileAllowed(t *testing.T) {
+	dir := t.TempDir()
+	from, to := filepath.Join(dir, "foo"), filepath.Join(dir, "Foo2")
+	if err := os.WriteFile(from, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Link(from, to); err != nil {
+		t.Skipf("hard links unavailable: %v", err)
+	}
+	if err := localfs.New().Rename(t.Context(), filepath.ToSlash(from), filepath.ToSlash(to)); err != nil {
+		t.Fatalf("Rename onto same file: %v", err)
+	}
+}
+
+func TestRenameOntoDifferentFileRefused(t *testing.T) {
+	dir := t.TempDir()
+	a, b := filepath.Join(dir, "a"), filepath.Join(dir, "b")
+	for _, p := range []string{a, b} {
+		if err := os.WriteFile(p, []byte("x"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := localfs.New().Rename(t.Context(), filepath.ToSlash(a), filepath.ToSlash(b)); !errors.Is(err, vfs.ErrExist) {
+		t.Fatalf("err = %v, want ErrExist", err)
 	}
 }

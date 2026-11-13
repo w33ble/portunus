@@ -3,12 +3,14 @@ package localfs
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/w33ble/portunus/internal/vfs"
@@ -144,11 +146,17 @@ func (*FS) Remove(_ context.Context, p string) error {
 	return nil
 }
 
+// CaseInsensitive reports whether the platform's default volumes ignore case.
+func (*FS) CaseInsensitive() bool { return runtime.GOOS == "darwin" || runtime.GOOS == "windows" }
+
 // Rename refuses to replace an existing target. The Lstat check and the rename are
 // not atomic, so a concurrent creator of `to` can still be overwritten.
 func (*FS) Rename(_ context.Context, from, to string) error {
-	if _, err := os.Lstat(osPath(to)); err == nil {
-		return fmt.Errorf("localfs rename %s -> %s: %w", from, to, vfs.ErrExist)
+	if toi, err := os.Lstat(osPath(to)); err == nil {
+		// A case-only rename on a case-insensitive volume finds the source as `to`.
+		if fromi, err := os.Lstat(osPath(from)); err != nil || !os.SameFile(fromi, toi) {
+			return fmt.Errorf("localfs rename %s -> %s: %w", from, to, vfs.ErrExist)
+		}
 	}
 	if err := os.Rename(osPath(from), osPath(to)); err != nil {
 		return fmt.Errorf("localfs rename %s -> %s: %w", from, to, err)
@@ -175,12 +183,12 @@ func resolveLinks(p string) string {
 	return p
 }
 
-// Create stages into `.<name>.portunus-tmp` beside the target; concurrent writers to
-// the same target are not supported.
+// Create stages into `.<name>.<random>.portunus-tmp` beside the target, so concurrent
+// writers to one target each get their own temp file and the last rename wins.
 func (*FS) Create(_ context.Context, p string, opts vfs.CreateOpts) (vfs.Writer, error) {
 	target := resolveLinks(osPath(p))
-	tmp := filepath.Join(filepath.Dir(target), "."+filepath.Base(target)+tmpSuffix)
-	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666) //nolint:gosec // umask governs
+	tmp := filepath.Join(filepath.Dir(target), "."+filepath.Base(target)+"."+rand.Text()[:12]+tmpSuffix)
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o666) //nolint:gosec // umask governs
 	if err != nil {
 		return nil, fmt.Errorf("localfs create %s: %w", p, err)
 	}

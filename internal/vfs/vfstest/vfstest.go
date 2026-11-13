@@ -70,6 +70,7 @@ func Run(t *testing.T, h Harness) {
 		{"Symlinks", testSymlinks},
 		{"Home", testHome},
 		{"ConcurrentCreate", testConcurrentCreate},
+		{"ConcurrentCreateSamePath", testConcurrentCreateSamePath},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) { c.fn(t, h) })
@@ -781,4 +782,25 @@ func testConcurrentCreate(t *testing.T, h Harness) {
 	for name, data := range want {
 		wantContent(t, f, path.Join(root, name), data)
 	}
+}
+
+func testConcurrentCreateSamePath(t *testing.T, h Harness) {
+	f, root := setup(t, h)
+	ctx := ctxFor(t)
+	p := path.Join(root, "same")
+	a, b := content(300_000, 1), content(200_000, 2)
+	errs := make([]error, 2)
+	var wg sync.WaitGroup
+	for i, data := range [][]byte{a, b} {
+		wg.Go(func() { errs[i] = putErr(ctx, f, p, data, vfs.CreateOpts{}) })
+	}
+	wg.Wait()
+	if errs[0] != nil && errs[1] != nil {
+		t.Fatalf("both writers failed: %v / %v", errs[0], errs[1])
+	}
+	got := get(t, f, p, 0)
+	if !bytes.Equal(got, a) && !bytes.Equal(got, b) {
+		t.Fatalf("final content (%d bytes) is neither writer's data", len(got))
+	}
+	wantNames(t, f, root, "same")
 }

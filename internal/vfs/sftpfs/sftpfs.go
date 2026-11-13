@@ -142,7 +142,7 @@ func (f *FS) entry(p string, lfi os.FileInfo) vfs.Entry {
 		e.Link = "?"
 	}
 	if tfi, err := f.browse.Stat(p); err == nil {
-		e.Size, e.ModTime, e.IsDir = tfi.Size(), tfi.ModTime(), tfi.IsDir()
+		e.Size, e.ModTime, e.IsDir, e.Mode = tfi.Size(), tfi.ModTime(), tfi.IsDir(), tfi.Mode()
 	}
 	return e
 }

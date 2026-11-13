@@ -2,6 +2,7 @@ package sftpfs
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
@@ -16,7 +17,7 @@ import (
 	"github.com/w33ble/portunus/internal/vfs"
 )
 
-// Create stages content in ".<name>.portunus-tmp" next to the target and renames it over
+// Create stages content in ".<name>.<random>.portunus-tmp" next to the target and renames it over
 // the target on Commit (posix-rename, so existing files are replaced atomically). If the
 // target is a symlink the link's destination is replaced. If the directory refuses a temp
 // file but the existing target is writable, content is written in place instead; that
@@ -42,8 +43,8 @@ func (f *FS) Create(ctx context.Context, p string, opts vfs.CreateOpts) (vfs.Wri
 	}
 
 	dir, base := path.Split(target)
-	tmp := path.Join(dir, "."+base+tmpSuffix)
-	file, err := f.xfer.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+	tmp := path.Join(dir, "."+base+"."+rand.Text()[:12]+tmpSuffix)
+	file, err := f.xfer.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL)
 	direct := false
 	if err != nil && exists && errors.Is(err, os.ErrPermission) {
 		if file, err = f.xfer.OpenFile(target, os.O_WRONLY|os.O_TRUNC); err == nil {

@@ -5,9 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/skeema/knownhosts"
 	"golang.org/x/crypto/ssh"
@@ -29,6 +32,8 @@ type dialState struct {
 
 	// per-handshake
 	prompted  bool
+	timedOut  atomic.Bool
+	stopTimer func() bool
 	hostErr   error
 	pending   *pendingKey
 	db        *knownhosts.HostKeyDB
@@ -149,11 +154,25 @@ func (st *dialState) handshake(conn net.Conn) (*ssh.Client, error) {
 		cfg.HostKeyAlgorithms = algos
 	}
 
+	timeout := st.o.ConnectTimeout
+	if timeout <= 0 {
+		timeout = defaultConnTimeout
+	}
+	st.timedOut.Store(false)
+	timer := time.AfterFunc(timeout, func() {
+		st.timedOut.Store(true)
+		_ = conn.Close()
+	})
+	st.stopTimer = timer.Stop
 	stop := context.AfterFunc(st.ctx, func() { _ = conn.Close() })
 	sc, chans, reqs, err := ssh.NewClientConn(conn, lookup, cfg)
 	stop()
+	timer.Stop()
 	if err != nil {
 		_ = conn.Close()
+		if st.timedOut.Load() {
+			return nil, fmt.Errorf("handshake timed out after %s: %w", timeout, os.ErrDeadlineExceeded)
+		}
 		return nil, err
 	}
 	if err := st.ctx.Err(); err != nil {
@@ -209,6 +228,9 @@ func (st *dialState) ask(req prompt.SecretRequest) (string, error) {
 		return "", errNoPrompter
 	}
 	st.prompted = true
+	if st.stopTimer != nil {
+		st.stopTimer() // the user's think time is not the server's fault
+	}
 	ans, err := st.d.Prompter.AskSecret(st.ctx, req)
 	if err != nil {
 		return "", st.setFatal(err)
