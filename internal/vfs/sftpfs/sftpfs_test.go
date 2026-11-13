@@ -105,7 +105,8 @@ func TestThroughputLocal64MiB(t *testing.T) {
 }
 
 // With 50ms RTT a request-per-chunk client manages ~0.6 MB/s (32KiB / 50ms); only the
-// pipelined WriteTo/ReadFrom paths reach the plan's 10 MB/s target.
+// pipelined WriteTo/ReadFrom paths reach the plan's 10 MB/s target. The race detector slows
+// the loopback proxy, so it gets a lower floor that still catches the unpipelined path.
 func TestThroughputOverHighLatencyLink(t *testing.T) {
 	t.Parallel()
 	r := newRig(t)
@@ -121,8 +122,12 @@ func TestThroughputOverHighLatencyLink(t *testing.T) {
 	data := randomBytes(32 << 20)
 	up, down := roundTrip(t, f, filepath.Join(t.TempDir(), "big"), data)
 	t.Logf("32MiB at 50ms RTT: up %.1f MB/s, down %.1f MB/s", up/1e6, down/1e6)
-	if up < 10e6 || down < 10e6 {
-		t.Fatalf("pipelining not effective: up %.1f MB/s, down %.1f MB/s", up/1e6, down/1e6)
+	floor := 10e6
+	if raceEnabled {
+		floor = 2e6
+	}
+	if up < floor || down < floor {
+		t.Fatalf("pipelining not effective: up %.1f MB/s, down %.1f MB/s (floor %.0f)", up/1e6, down/1e6, floor/1e6)
 	}
 }
 
