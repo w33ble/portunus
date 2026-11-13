@@ -1,4 +1,5 @@
 import { type FormEvent, type ReactNode, useEffect, useId, useRef } from 'react';
+import { nextTabStop } from '../../lib/tabStops';
 import styles from './Modal.module.css';
 
 interface ModalProps {
@@ -38,6 +39,13 @@ export function Modal({ title, children, actions, onCancel, onSubmit, width = 42
       onCancel={(event) => {
         event.preventDefault();
         onCancel?.();
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== 'Tab' || event.altKey || event.ctrlKey || event.metaKey) return;
+        const next = nextTabStop(event.currentTarget, document.activeElement, event.shiftKey);
+        if (!next) return;
+        event.preventDefault();
+        next.focus();
       }}
     >
       <form className={styles.form} onSubmit={submit}>
