@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import * as api from '../../api';
 import type { VersionInfo } from '../../api/types';
+import { IS_MAC } from '../../lib/platform';
 import { useSettings } from '../../stores/settings';
 import controls from '../ui/controls.module.css';
 import { Modal } from '../ui/Modal';
 import { TransferLimitsFields } from './TransferLimitsFields';
-
-const IS_MAC = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform);
 
 export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const settings = useSettings((s) => s.settings);

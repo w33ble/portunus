@@ -1,5 +1,7 @@
 import type { Ref } from 'react';
-import { parentPath } from '../../lib/paths';
+import { historyShortcut } from '../../lib/history';
+import { baseName, parentPath } from '../../lib/paths';
+import { IS_MAC } from '../../lib/platform';
 import { requestNewFolder } from '../../stores/fileOps';
 import type { PaneId } from '../../stores/paneTypes';
 import { usePanes } from '../../stores/panes';
@@ -18,10 +20,34 @@ export function PaneHeader({ paneId, pathBarRef }: Props) {
   const pane = usePanes((s) => s.panes[paneId]);
   const noConnection = pane.connId === null;
   const atRoot = parentPath(pane.path) === pane.path;
+  const backTo = pane.history.back.at(-1);
+  const forwardTo = pane.history.forward.at(-1);
 
   return (
     <div className={styles.header}>
       <ConnectionPicker paneId={paneId} />
+      <div className={styles.nav}>
+        <button
+          type="button"
+          className={controls.iconButton}
+          aria-label="Back"
+          title={navTitle('back', backTo)}
+          disabled={noConnection || backTo === undefined}
+          onClick={() => usePanes.getState().goBack(paneId)}
+        >
+          <Icon name="chevronLeft" />
+        </button>
+        <button
+          type="button"
+          className={controls.iconButton}
+          aria-label="Forward"
+          title={navTitle('forward', forwardTo)}
+          disabled={noConnection || forwardTo === undefined}
+          onClick={() => usePanes.getState().goForward(paneId)}
+        >
+          <Icon name="chevronRight" />
+        </button>
+      </div>
       <button
         type="button"
         className={controls.iconButton}
@@ -60,4 +86,11 @@ export function PaneHeader({ paneId, pathBarRef }: Props) {
       </button>
     </div>
   );
+}
+
+/** "Back to docs (⌘[)": names the destination folder and the shortcut. */
+function navTitle(direction: 'back' | 'forward', to: string | undefined): string {
+  const label = direction === 'back' ? 'Back' : 'Forward';
+  const dest = to === undefined ? '' : ` to ${baseName(to) || to}`;
+  return `${label}${dest} (${historyShortcut(direction, IS_MAC)})`;
 }
