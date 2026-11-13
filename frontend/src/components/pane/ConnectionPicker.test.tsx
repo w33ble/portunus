@@ -83,4 +83,20 @@ describe('ConnectionPicker', () => {
 
     expect(renderPicker().selectedOptions[0]?.textContent).toBe('Prod bucket');
   });
+
+  it('lists SSH hosts and S3 profiles in case-insensitive natural order', () => {
+    useConnections.setState({
+      hosts: ['web10', 'Zeta', 'alpha', 'web2', 'Beta'].map((alias) => ({ alias, source: 'c:1' })),
+      profiles: [
+        { id: 'p1', name: 'logs' },
+        { id: 'p2', name: 'Archive' },
+      ] as never,
+    });
+
+    const select = renderPicker();
+    const group = (label: string) =>
+      [...select.querySelectorAll(`optgroup[label="${label}"] option`)].map((o) => o.textContent);
+    expect(group('SSH hosts')).toEqual(['alpha', 'Beta', 'web2', 'web10', 'Zeta']);
+    expect(group('S3')).toEqual(['Archive', 'logs']);
+  });
 });

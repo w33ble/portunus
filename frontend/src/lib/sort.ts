@@ -12,6 +12,11 @@ export const DEFAULT_SORT: SortState = { key: 'name', dir: 'asc' };
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
+/** Case-insensitive natural order (web2 before web10) by a label. */
+export function sortByLabel<T>(items: readonly T[], label: (item: T) => string): T[] {
+  return items.toSorted((a, b) => collator.compare(label(a), label(b)));
+}
+
 function compareBy(key: SortKey, a: Entry, b: Entry): number {
   switch (key) {
     case 'name':
