@@ -55,6 +55,7 @@ interface PanesState {
   /** Returns to the previous folder in this pane's history. */
   goBack: (id: PaneId) => void;
   goForward: (id: PaneId) => void;
+  /** Relists this pane's directory, and the other pane too when it shows the same one. */
   refresh: (id: PaneId) => void;
   /** Refreshes panes showing `dir` on `connId` (or any directory of the connection when omitted). */
   refreshWhere: (connId: string, dir?: string) => void;
@@ -220,7 +221,7 @@ export const usePanes = create<PanesState>()((set, get) => {
 
     refresh(id) {
       const { connId, path } = get().panes[id];
-      if (connId !== null) load(id, connId, path, 'refresh');
+      if (connId !== null) get().refreshWhere(connId, path);
     },
 
     refreshWhere(connId, dir) {

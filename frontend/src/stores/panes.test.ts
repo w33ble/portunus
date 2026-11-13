@@ -217,6 +217,34 @@ describe('pulled listings', () => {
   });
 });
 
+describe('refresh', () => {
+  it('relists the other pane when it shows the same directory on the same connection', async () => {
+    const lists = captureLists();
+    connectMock.mockResolvedValue(localConnection());
+    await usePanes.getState().connectTo('left', api.targets.local(), 'Local');
+    await usePanes.getState().connectTo('right', api.targets.local(), 'Local');
+    lists[0]!.page(entry('old'));
+    lists[0]!.done.resolve();
+    lists[1]!.page(entry('old'));
+    lists[1]!.done.resolve();
+    await vi.advanceTimersByTimeAsync(100);
+
+    usePanes.getState().refresh('left');
+    expect(lists).toHaveLength(4);
+    lists[2]!.page(entry('new'));
+    lists[2]!.done.resolve();
+    lists[3]!.page(entry('new'));
+    lists[3]!.done.resolve();
+    await vi.advanceTimersByTimeAsync(100);
+    const right = shownEntries(usePanes.getState().panes.right.listing).map((e) => e.name);
+    expect(right).toEqual(['new']);
+
+    usePanes.getState().navigate('right', '/elsewhere');
+    usePanes.getState().refresh('left');
+    expect(lists).toHaveLength(6);
+  });
+});
+
 describe('refreshWhere', () => {
   it('refreshes only panes showing the directory', async () => {
     const lists = captureLists();
