@@ -188,6 +188,7 @@ Conflicts are gated per job: the first conflict in a job prompts; other conflict
 - **States**: `queued → running → done | failed | canceled | skipped`, plus `waiting` (conflict gate). `exhaustive` lint covers switches over these.
 - **Progress**: tasks update atomics; one aggregator emits a batched `transfers:update` every 250 ms (dirty rows only). State transitions emit immediately. Speed is an EWMA; ETA comes from that. Finished tasks collapse into per-job counters so a 100k-file job doesn't keep 100k rows in the UI.
 - **Retry**: re-enqueue failed tasks only. No auto-retry in MVP beyond the single transparent SSH redial.
+- **Resume**: a canceled job re-walks its original sources against the original destination, counts the paths that finished before the cancel without redoing them, and restarts in-flight files from byte 0. The job keeps its set of finished paths only while it is canceled.
 
 ### Frontend
 
