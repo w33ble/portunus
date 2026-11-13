@@ -1,5 +1,6 @@
 import { targets } from '../../api';
 import type { Target } from '../../api/types';
+import { sortByLabel } from '../../lib/sort';
 import { useConnections } from '../../stores/connections';
 import type { PaneId } from '../../stores/paneTypes';
 import { usePanes } from '../../stores/panes';
@@ -62,7 +63,7 @@ export function ConnectionPicker({ paneId }: { paneId: PaneId }) {
               {sshUnavailable}
             </option>
           )}
-          {hosts.map((h) => (
+          {sortByLabel(hosts, (h) => h.alias).map((h) => (
             <option key={h.alias} value={`ssh:${h.alias}`}>
               {h.alias}
             </option>
@@ -71,7 +72,7 @@ export function ConnectionPicker({ paneId }: { paneId: PaneId }) {
       )}
       {profiles.length > 0 && (
         <optgroup label="S3">
-          {profiles.map((p) => (
+          {sortByLabel(profiles, (p) => p.name).map((p) => (
             <option key={p.id} value={`s3:${p.id}`}>
               {p.name}
             </option>
