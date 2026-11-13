@@ -2,13 +2,16 @@
 package settings
 
 import (
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/w33ble/portunus/internal/atomicfile"
 )
 
 const fileName = "settings.json"
@@ -74,7 +77,7 @@ func (s *Store) Get() Settings {
 func (s *Store) Save(next Settings) (Settings, error) {
 	next = normalize(next)
 
-	data, err := json.MarshalIndent(next, "", "  ")
+	data, err := json.Marshal(next, jsontext.WithIndent("  "))
 	if err != nil {
 		return Settings{}, err
 	}
@@ -82,8 +85,8 @@ func (s *Store) Save(next Settings) (Settings, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := writeAtomic(s.path, data); err != nil {
-		return Settings{}, err
+	if err := atomicfile.Write(s.path, append(data, '\n')); err != nil {
+		return Settings{}, fmt.Errorf("write settings: %w", err)
 	}
 	s.cur = next
 	return next, nil
@@ -100,28 +103,4 @@ func normalize(v Settings) Settings {
 	v.GlobalTransfers = min(v.GlobalTransfers, 32)
 	v.PerConnectionTransfers = min(v.PerConnectionTransfers, v.GlobalTransfers)
 	return v
-}
-
-func writeAtomic(path string, data []byte) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return fmt.Errorf("create config dir: %w", err)
-	}
-
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".settings-*.tmp")
-	if err != nil {
-		return fmt.Errorf("write settings: %w", err)
-	}
-	defer func() { _ = os.Remove(tmp.Name()) }()
-
-	if _, err := tmp.Write(append(data, '\n')); err != nil {
-		_ = tmp.Close()
-		return fmt.Errorf("write settings: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("write settings: %w", err)
-	}
-	if err := os.Rename(tmp.Name(), path); err != nil {
-		return fmt.Errorf("write settings: %w", err)
-	}
-	return nil
 }

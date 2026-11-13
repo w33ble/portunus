@@ -168,3 +168,37 @@ func TestS3ConfigErrorsWhenStaticSecretUnavailable(t *testing.T) {
 		t.Errorf("no-key profile: %v", err)
 	}
 }
+
+func TestOpenReadsExistingFileAndKeepsFieldNames(t *testing.T) {
+	dir := t.TempDir()
+	// Shape written before the json/v2 move, plus a key from a future version.
+	legacy := `{"s3": [{"id": "abc", "name": "minio", "endpoint": "http://localhost:9000", "pathStyle": true, "bucket": "b", "later": 1}]}`
+	if err := os.WriteFile(filepath.Join(dir, "profiles.json"), []byte(legacy), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Open(dir, Memory())
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := S3Profile{ID: "abc", Name: "minio", Endpoint: "http://localhost:9000", PathStyle: true, Bucket: "b"}
+	if l := s.List(); len(l) != 1 || l[0] != want {
+		t.Fatalf("List = %+v, want [%+v]", l, want)
+	}
+
+	if _, err := s.Save(S3Profile{ID: "def", Name: "plain"}, ""); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, "profiles.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{`"pathStyle": true`, `"endpoint"`, `"bucket"`} {
+		if !strings.Contains(string(raw), key) {
+			t.Errorf("profiles.json lost %s:\n%s", key, raw)
+		}
+	}
+	// Zero-valued optional fields stay out of the file, as before.
+	if strings.Count(string(raw), `"pathStyle"`) != 1 || strings.Contains(string(raw), `"region"`) {
+		t.Errorf("zero-valued fields were written:\n%s", raw)
+	}
+}

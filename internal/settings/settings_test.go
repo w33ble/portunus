@@ -101,3 +101,50 @@ func TestOpenRejectsCorruptFile(t *testing.T) {
 		t.Fatal("corrupt settings accepted")
 	}
 }
+
+func TestOpenReadsFilesWrittenByOlderAndNewerVersions(t *testing.T) {
+	dir := t.TempDir()
+	// A future version's extra key is ignored; a differently cased key is not our field.
+	raw := `{"globalTransfers": 8, "futureOption": {"a": 1}, "ShowHidden": true}`
+	if err := os.WriteFile(filepath.Join(dir, fileName), []byte(raw), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := s.Get()
+	if got.GlobalTransfers != 8 || got.ShowHidden {
+		t.Fatalf("got %+v, want globalTransfers=8 and showHidden left at its default", got)
+	}
+}
+
+func TestOpenRejectsDuplicateKeys(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, fileName), []byte(`{"showHidden": true, "showHidden": false}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Open(dir); err == nil {
+		t.Fatal("duplicate keys accepted")
+	}
+}
+
+func TestSaveKeepsOnDiskFieldNames(t *testing.T) {
+	dir := t.TempDir()
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Save(Defaults()); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, fileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "{\n  \"globalTransfers\": 4,\n  \"perConnectionTransfers\": 2,\n  \"loadAppleKeychain\": true,\n  \"showHidden\": false\n}\n"
+	if string(raw) != want {
+		t.Fatalf("settings.json = %q, want %q", raw, want)
+	}
+}
