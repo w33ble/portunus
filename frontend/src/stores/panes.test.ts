@@ -230,3 +230,25 @@ describe('navigation helpers', () => {
     expect(usePanes.getState().panes.right.sort).toEqual({ key: 'name', dir: 'asc' });
   });
 });
+
+describe('reconnecting', () => {
+  it('redials the last target and relists the current directory', async () => {
+    const lists = captureLists();
+    connectMock.mockResolvedValue({ ...localConnection(), id: 's3:p', home: '/' });
+    const target = api.targets.s3('p');
+    await usePanes.getState().connectTo('left', target, 'Prod');
+    usePanes.getState().navigate('left', '/bucket/dir');
+    expect(left().lastTarget).toEqual({ target, label: 'Prod' });
+
+    connectMock.mockClear();
+    await usePanes.getState().reconnect('left');
+    expect(connectMock).toHaveBeenCalledWith(target);
+    expect(left()).toMatchObject({ connId: 's3:p', path: '/bucket/dir' });
+    expect(lists.at(-1)).toBeDefined();
+  });
+
+  it('does nothing for a pane that never connected', async () => {
+    await usePanes.getState().reconnect('right');
+    expect(connectMock).not.toHaveBeenCalled();
+  });
+});

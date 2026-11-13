@@ -41,9 +41,18 @@ export function copyToOtherPane(id: PaneId): void {
   const dest = usePanes.getState().panes[otherPane(id)];
   const entries = selectedEntries(id);
   if (source.connId === null || dest.connId === null || entries.length === 0) return;
+  const sources = entries.map((e) => e.path);
+  if (
+    isSameDirectoryDrop(
+      { connId: source.connId, paths: sources },
+      { connId: dest.connId, dir: dest.path }
+    )
+  ) {
+    return;
+  }
   void startCopy({
     srcConn: source.connId,
-    sources: entries.map((e) => e.path),
+    sources,
     dstConn: dest.connId,
     dstDir: dest.path,
   });

@@ -1,6 +1,5 @@
 import { targets } from '../../api';
 import type { Target } from '../../api/types';
-import { targetKey } from '../../lib/targets';
 import { useConnections } from '../../stores/connections';
 import type { PaneId } from '../../stores/paneTypes';
 import { usePanes } from '../../stores/panes';
@@ -14,16 +13,20 @@ const SSH_UNAVAILABLE = '__ssh-unavailable';
 
 export function ConnectionPicker({ paneId }: { paneId: PaneId }) {
   const connId = usePanes((s) => s.panes[paneId].connId);
+  const lastLabel = usePanes((s) => s.panes[paneId].lastTarget?.label);
   const { connections, hosts, profiles, sshUnavailable } = useConnections();
   const openDialog = useUi((s) => s.openDialog);
 
-  const current = connections.find((c) => c.id === connId);
-  const currentKey = current ? targetKey(current.target) : 'local';
+  // Option values are connection ids, so the select always shows the pane's real connection.
+  const currentKey = connId ?? 'local';
   const known = new Set([
     'local',
     ...hosts.map((h) => `ssh:${h.alias}`),
     ...profiles.map((p) => `s3:${p.id}`),
   ]);
+  const unlisted = known.has(currentKey)
+    ? null
+    : (connections.find((c) => c.id === currentKey)?.label ?? lastLabel ?? currentKey);
 
   const choose = (value: string) => {
     const connect = (target: Target, label: string) =>
@@ -51,7 +54,7 @@ export function ConnectionPicker({ paneId }: { paneId: PaneId }) {
       onChange={(e) => choose(e.target.value)}
     >
       <option value="local">Local</option>
-      {current && !known.has(currentKey) && <option value={currentKey}>{current.label}</option>}
+      {unlisted !== null && <option value={currentKey}>{unlisted}</option>}
       {(hosts.length > 0 || sshUnavailable !== '') && (
         <optgroup label="SSH hosts">
           {sshUnavailable !== '' && (

@@ -244,3 +244,40 @@ func waitFor(t *testing.T, cond func() bool) {
 		time.Sleep(5 * time.Millisecond)
 	}
 }
+
+func TestResetClosesLiveButRedialsOnNextUse(t *testing.T) {
+	d := &fakeDialer{}
+	r, _ := newTestRegistry(d)
+
+	if _, err := r.Connect(context.Background(), hostA); err != nil {
+		t.Fatal(err)
+	}
+	first := d.last
+	if err := r.Reset("ssh:a"); err != nil {
+		t.Fatal(err)
+	}
+	if !first.closed.Load() {
+		t.Fatal("reset did not close the FS")
+	}
+	if len(r.List()) != 1 {
+		t.Fatalf("live connections after reset = %d, want 1 (local)", len(r.List()))
+	}
+
+	fs, err := r.FS(context.Background(), "ssh:a")
+	if err != nil {
+		t.Fatalf("FS after reset: %v", err)
+	}
+	if fs == first || d.count() != 2 {
+		t.Fatalf("expected a fresh dial, calls = %d", d.count())
+	}
+}
+
+func TestResetLocalIsNoop(t *testing.T) {
+	r, _ := newTestRegistry(&fakeDialer{})
+	if err := r.Reset(LocalID); err != nil {
+		t.Fatal(err)
+	}
+	if len(r.List()) != 1 {
+		t.Fatal("local connection was removed")
+	}
+}

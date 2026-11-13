@@ -233,6 +233,26 @@ func (r *registry) Disconnect(id string) error {
 	return err
 }
 
+// Reset closes the live connection for id but keeps its target, so the next FS call
+// redials with whatever settings are current.
+func (r *registry) Reset(id string) error {
+	if id == LocalID {
+		return nil
+	}
+
+	r.mu.Lock()
+	lc := r.live[id]
+	delete(r.live, id)
+	r.mu.Unlock()
+
+	if lc == nil {
+		return nil
+	}
+	err := lc.fs.Close()
+	r.changed()
+	return err
+}
+
 func (r *registry) List() []Connection {
 	r.mu.Lock()
 	out := make([]Connection, 0, len(r.live))

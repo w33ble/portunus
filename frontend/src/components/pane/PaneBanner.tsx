@@ -8,6 +8,7 @@ import styles from './PaneBanner.module.css';
 /** Floats over the list so state changes never move the rows. */
 export function PaneBanner({ paneId }: { paneId: PaneId }) {
   const status = usePanes((s) => s.panes[paneId].status);
+  const lastTarget = usePanes((s) => s.panes[paneId].lastTarget);
 
   if (status.kind === 'connecting') {
     return (
@@ -23,6 +24,15 @@ export function PaneBanner({ paneId }: { paneId: PaneId }) {
       <div className={`${styles.banner} ${styles.error}`} role="alert">
         <Icon name="warning" />
         <span className={styles.message}>{describeError(status.error)}</span>
+        {status.error.kind === 'not_connected' && lastTarget !== null && (
+          <button
+            type="button"
+            className={controls.button}
+            onClick={() => void usePanes.getState().reconnect(paneId)}
+          >
+            Reconnect
+          </button>
+        )}
         <button
           type="button"
           className={controls.button}

@@ -29,6 +29,8 @@ export type PaneStatus =
 export interface PaneState {
   id: PaneId;
   connId: string | null;
+  /** What `connId` was dialed from, kept so a lost connection can be reopened. */
+  lastTarget: { target: Target; label: string } | null;
   path: string;
   status: PaneStatus;
   listing: Listing;
@@ -43,6 +45,8 @@ interface PanesState {
   /** Opens both panes on the local home directory. No-op once a pane is in use. */
   init: () => void;
   connectTo: (id: PaneId, target: Target, label: string) => Promise<void>;
+  /** Redials the pane's last target and relists the current directory. */
+  reconnect: (id: PaneId) => Promise<void>;
   navigate: (id: PaneId, path: string) => void;
   goUp: (id: PaneId) => void;
   refresh: (id: PaneId) => void;
@@ -58,6 +62,7 @@ function blankPane(id: PaneId): PaneState {
   return {
     id,
     connId: null,
+    lastTarget: null,
     path: '/',
     status: { kind: 'idle' },
     listing: EMPTY_LISTING,
@@ -89,13 +94,20 @@ export const usePanes = create<PanesState>()((set, get) => {
   const isCurrent = (id: PaneId, requestId: string) =>
     get().panes[id].listing.requestId === requestId;
 
-  function load(id: PaneId, connId: string, path: string, mode: 'navigate' | 'refresh') {
+  function load(
+    id: PaneId,
+    connId: string,
+    path: string,
+    mode: 'navigate' | 'refresh',
+    lastTarget?: PaneState['lastTarget']
+  ) {
     const requestId = `${id}-${++requestCounter}`;
     inflight[id]?.cancel();
 
     patch(id, (pane) => ({
       ...pane,
       connId,
+      lastTarget: lastTarget ?? pane.lastTarget,
       path,
       status: { kind: 'loading' },
       listing: startListing(requestId, mode === 'refresh' ? shownEntries(pane.listing) : null),
@@ -127,6 +139,24 @@ export const usePanes = create<PanesState>()((set, get) => {
     );
   }
 
+  /** Connects `target`; lists `keepPath` when given, else the connection's home. */
+  async function dial(id: PaneId, target: Target, label: string, keepPath: string | null) {
+    const token = ++connectSeq[id];
+    patch(id, (pane) => ({ ...pane, status: { kind: 'connecting', label } }));
+    try {
+      const conn = await api.connections.connect(target);
+      if (token !== connectSeq[id]) return;
+      useConnections.getState().upsert(conn);
+      const path = keepPath ?? normalizePath(conn.home || '/');
+      load(id, conn.id, path, keepPath === null ? 'navigate' : 'refresh', { target, label });
+    } catch (e) {
+      if (token !== connectSeq[id]) return;
+      const error = toAppError(e);
+      patch(id, (pane) => ({ ...pane, status: { kind: 'error', error } }));
+      useUi.getState().showError(`Couldn’t connect to ${label}`, error);
+    }
+  }
+
   return {
     panes: initialPanes,
 
@@ -140,19 +170,12 @@ export const usePanes = create<PanesState>()((set, get) => {
     },
 
     async connectTo(id, target, label) {
-      const token = ++connectSeq[id];
-      patch(id, (pane) => ({ ...pane, status: { kind: 'connecting', label } }));
-      try {
-        const conn = await api.connections.connect(target);
-        if (token !== connectSeq[id]) return;
-        useConnections.getState().upsert(conn);
-        load(id, conn.id, normalizePath(conn.home || '/'), 'navigate');
-      } catch (e) {
-        if (token !== connectSeq[id]) return;
-        const error = toAppError(e);
-        patch(id, (pane) => ({ ...pane, status: { kind: 'error', error } }));
-        useUi.getState().showError(`Couldn’t connect to ${label}`, error);
-      }
+      await dial(id, target, label, null);
+    },
+
+    async reconnect(id) {
+      const { lastTarget, path } = get().panes[id];
+      if (lastTarget !== null) await dial(id, lastTarget.target, lastTarget.label, path);
     },
 
     navigate(id, path) {

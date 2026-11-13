@@ -36,7 +36,7 @@ func Classify(err error) ErrorKind {
 	switch {
 	case errors.As(err, &mismatch):
 		return ErrKindHostKeyMismatch
-	case errors.Is(err, context.Canceled), errors.Is(err, prompt.ErrClosed):
+	case errors.Is(err, context.Canceled), errors.Is(err, prompt.ErrClosed), errors.Is(err, prompt.ErrUnknownPrompt):
 		return ErrKindCanceled
 	case errors.Is(err, ErrNotConnected):
 		return ErrKindNotConnected

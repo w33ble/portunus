@@ -64,9 +64,9 @@ func (s *ConnectionService) SaveS3Profile(p profiles.S3Profile, secret string) (
 		return profiles.S3Profile{}, err
 	}
 
-	// Drop a live connection so the next use picks up the new settings.
+	// Close the live connection but keep the target: panes redial with the new settings.
 	id, _ := targetID(Target{Kind: TargetS3, ProfileID: saved.ID})
-	_ = s.app.reg.Disconnect(id)
+	_ = s.app.reg.Reset(id)
 	return saved, nil
 }
 

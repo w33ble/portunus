@@ -159,7 +159,8 @@ func (a *App) dial(ctx context.Context, t Target) (dialed, error) {
 }
 
 func (a *App) dialSSH(ctx context.Context, t Target) (dialed, error) {
-	if a.sshErr != nil {
+	quickNoSSH := a.sshErr != nil && t.Alias == ""
+	if a.sshErr != nil && !quickNoSSH {
 		return dialed{}, a.sshErr
 	}
 
@@ -168,10 +169,15 @@ func (a *App) dialSSH(ctx context.Context, t Target) (dialed, error) {
 		err   error
 		label = t.Alias
 	)
-	if t.Alias != "" {
+	switch {
+	case t.Alias != "":
 		opts, err = a.resolver.Resolve(ctx, t.Alias)
-	} else {
+	case quickNoSSH:
+		opts, err = quickOptionsForCurrentUser(t)
+	default:
 		opts, err = a.resolver.ResolveQuick(ctx, t.User, t.Host, t.Port)
+	}
+	if t.Alias == "" {
 		label = t.Host
 		if t.User != "" {
 			label = t.User + "@" + t.Host

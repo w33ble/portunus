@@ -237,6 +237,7 @@ describe('App', () => {
       (r) => r.textContent?.includes('notes.txt')
     );
     await act(async () => row?.click());
+    act(() => usePanes.getState().navigate('right', '/elsewhere'));
     vi.mocked(api.transfers.copy).mockResolvedValue('job');
     await act(async () => {
       list?.dispatchEvent(new KeyboardEvent('keydown', { key: 'F5', bubbles: true }));
@@ -245,7 +246,7 @@ describe('App', () => {
       srcConn: 'local',
       sources: ['/home/notes.txt'],
       dstConn: 'local',
-      dstDir: '/home',
+      dstDir: '/elsewhere',
     });
   });
 });
