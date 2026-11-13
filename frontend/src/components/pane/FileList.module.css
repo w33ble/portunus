@@ -1,0 +1,169 @@
+.root {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+}
+
+.scroller {
+  position: relative;
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior: none;
+  outline: none;
+}
+
+.scroller:focus-visible {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.root[data-drop='list']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--accent);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  pointer-events: none;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: var(--cols);
+  height: var(--row-height);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-chrome-active);
+}
+
+.headCell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 0 8px;
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: default;
+}
+
+.headCell:first-child {
+  border-left: 0;
+}
+
+.headCell:hover {
+  color: var(--text);
+}
+
+.headCell:focus-visible {
+  box-shadow: inset var(--focus-ring);
+}
+
+.headName {
+  padding-left: 30px;
+}
+
+.headSize {
+  justify-content: flex-end;
+}
+
+.body {
+  position: relative;
+  width: 100%;
+}
+
+.row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: var(--cols);
+  align-items: center;
+  height: var(--row-height);
+  contain: layout paint;
+}
+
+.row:nth-child(even) {
+  background: var(--bg-stripe);
+}
+
+.row[data-cursor='true'] {
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.row[data-selected='true'] {
+  background: var(--selection-inactive);
+}
+
+[data-pane-active='true'] .row[data-selected='true'] {
+  background: var(--selection-strong);
+  color: var(--selection-text);
+}
+
+[data-pane-active='true'] .row[data-selected='true'] .icon,
+[data-pane-active='true'] .row[data-selected='true'] .size,
+[data-pane-active='true'] .row[data-selected='true'] .modified {
+  color: inherit;
+}
+
+.row[data-drop='true'] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.row[data-drop='true'] .icon,
+.row[data-drop='true'] .size,
+.row[data-drop='true'] .modified {
+  color: inherit;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+.nameText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icon {
+  flex: none;
+  color: var(--text-secondary);
+}
+
+.icon[data-kind='dir'] {
+  color: var(--accent);
+}
+
+.size,
+.modified {
+  overflow: hidden;
+  padding: 0 8px;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.size {
+  text-align: right;
+}
+
+.empty {
+  position: absolute;
+  inset: var(--row-height) 0 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  pointer-events: none;
+}

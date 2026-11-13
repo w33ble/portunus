@@ -80,6 +80,11 @@ linters:
     paths:
       - frontend
       - build
+    rules:
+      # Test harnesses run docker/sshd with env-overridable images; args are argv, not a shell.
+      - path: _test\.go
+        linters: [gosec]
+        text: G702
 
 formatters:
   enable:

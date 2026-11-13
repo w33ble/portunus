@@ -1,0 +1,38 @@
+.view {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 36px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-chrome-active);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.empty {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  color: var(--text-secondary);
+}
+
+.empty p {
+  margin: 2px 0;
+}

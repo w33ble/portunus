@@ -8,3 +8,5 @@ frontend/bindings
 .DS_Store
 .env
 .env.*
+e2e/out
+e2e/node_modules

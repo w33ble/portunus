@@ -1,0 +1,36 @@
+name: E2E
+
+# Full UI smoke test (sshd + RustFS + server-mode build + Playwright). Runs after merges to main,
+# on demand, and from other workflows (e.g. a future release workflow) via workflow_call.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: End-to-end smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: OpenSSH server
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq openssh-server
+      - run: mise run e2e
+      - name: Screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-screenshots
+          path: e2e/out/
+          if-no-files-found: ignore
+          retention-days: 14

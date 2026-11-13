@@ -5,6 +5,27 @@ Targets: macOS primary, Linux supported, Windows not tested but not excluded.
 
 Reviewed by Claude Fable 5.2 (m2). Its findings are folded in below; the review is summarized at the end.
 
+## Status
+
+M0–M4 and M3.1 are implemented on `feat/mvp`. Every backend runs the shared VFS conformance suite against real servers (OpenSSH `sshd`, RustFS), and `mise run e2e` drives the real UI end to end in Wails server mode. M5 is partly done: macOS privacy usage strings are added, packaging hasn't been run.
+
+Needs a real desktop (macOS first, then GTK4 Linux):
+
+- Native window: hidden-inset titlebar drag region, traffic-light spacing, translucent backdrop.
+- HTML5 drag between panes and onto folder rows in WKWebView/WebKitGTK. The e2e run drives Chromium, and Wails intercepts native drags.
+- Finder/file-manager drops onto a pane (`data-file-drop-target` → `drop:files`).
+- launchd `SSH_AUTH_SOCK` from a Finder-launched `.app`, `ssh-add --apple-load-keychain`, Keychain storage of S3 secrets, TCC prompts.
+- `wails3 package` output (`.app`/`.dmg`, `.deb`/`.rpm`).
+
+Deviations from the design below, all deliberate:
+
+- No `Join` on `vfs.FS`: every backend uses absolute `/`-separated paths, so callers use package `path`.
+- `vfs.FS.Remove` deletes one entry; recursive delete is a transfer-engine job.
+- `sftpfs.List` reads the whole directory (pkg/sftp has no streaming readdir), then pages it to the UI.
+- The S3 writer's memory cap is per writer, not shared across concurrent transfers.
+- Copied directories get the destination's default mode; only file modes are preserved.
+- `PORTUNUS_SSH_CONFIG` overrides the ssh config file for listing and `ssh -G -F` (used by e2e).
+
 ## MVP scope
 
 In:
@@ -203,7 +224,7 @@ Each one ends with something runnable on macOS and Linux.
 - **VFS conformance suite**: one table of behaviors run against every backend: list paging, stat, open-at-offset, create+commit, create+abort leaves nothing, **commit over an existing file**, short write refused at commit, mode/mtime preserved, rename, symlink handling, not-exist mapping.
   - localfs: `t.TempDir()`.
   - sftpfs: **real OpenSSH `sshd`** started unprivileged on a temp port with a temp config (`/usr/sbin/sshd` exists on macOS and most Linux). The `pkg/sftp` in-process server is only a fast pre-check: it renames with `os.Rename` and would hide the overwrite bug.
-  - s3fs: **MinIO in Docker** for the integration lane. `gofakes3` only as a fast unit fake; it lacks `UploadPartCopy` and the AWS default-checksum upload path.
+  - s3fs: **RustFS in Docker** (S3-compatible, replaces MinIO, whose Docker images are no longer maintained) for the integration lane. `gofakes3` only as a fast unit fake; it lacks `UploadPartCopy` and the AWS default-checksum upload path.
 - **Auth matrix** (M2): in-memory agent on a temp socket, encrypted key + passphrase, `.pub`-pointed agent key, keyboard-interactive, ProxyJump through a second sshd.
 - **sshcfg**: fixtures always passed with `ssh -G -F fixture` so tests never read the developer's real config; cover `Match exec`, `Include` globs, tokens, `HostKeyAlias`.
 - **Engine**: fake FS with injectable latency/failure; cancel mid-file, conflict gate, retry, permit ordering, limit changes; run with `-race` at N > 1.

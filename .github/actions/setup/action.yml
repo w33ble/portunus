@@ -1,0 +1,24 @@
+name: Setup
+description: Install mise-pinned tools and restore Go caches.
+
+runs:
+  using: composite
+  steps:
+    # CGO off for tool installs: with gcc present, `go install` of the wails3 CLI would try to
+    # link GTK/WebKit, which the CLI doesn't need (and runners don't have before apt installs).
+    - uses: jdx/mise-action@d5574b52816a478f9d4e6529a3f6ff17a8a36785 # v5.2.8
+      env:
+        CGO_ENABLED: "0"
+      with:
+        install: true
+        cache: true
+
+    - name: Go caches
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+          ~/Library/Caches/go-build
+        key: go-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum', 'mise.toml') }}
+        restore-keys: go-${{ runner.os }}-${{ runner.arch }}-

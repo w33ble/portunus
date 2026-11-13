@@ -1,0 +1,29 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 24px;
+  padding: 0 10px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-chrome);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.summary {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: default;
+}
+
+.summary:hover {
+  color: var(--text);
+}
+
+.speed {
+  min-width: 80px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
