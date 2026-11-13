@@ -95,13 +95,18 @@ func TestSpeedAndETAAppearOnceBytesFlow(t *testing.T) {
 func TestStateTransitionsAreEmittedWithoutWaitingForATick(t *testing.T) {
 	t.Parallel()
 	h := newHarness(t, withTick(time.Hour))
-	h.fs["a"].addFile("/f", "f")
+	a := h.fs["a"]
+	a.addFile("/f", "f")
+	// Hold the copy open so the job can't reach done before its creation is emitted.
+	bl := newBlocker("open")
+	a.setHook(bl.hook)
 	id := h.copyJob("a", []string{"/f"}, "b", "/d", PolicyAsk)
+	bl.waitArrived(h, 1)
+	h.eventually("running update with a one-hour tick", func() bool {
+		return h.sawJobState(id, StateQueued) || h.sawJobState(id, StateRunning)
+	})
+	bl.releaseAll()
 	h.eventually("done update with a one-hour tick", func() bool { return h.sawJobState(id, StateDone) })
-	first := h.allUpdates()[0]
-	if len(first.Jobs) != 1 || first.Jobs[0].State != StateQueued && first.Jobs[0].State != StateRunning {
-		t.Fatalf("job creation was not emitted promptly: %+v", first)
-	}
 }
 
 func TestUpdatesCarryOnlyJobsThatChanged(t *testing.T) {
