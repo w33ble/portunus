@@ -12,3 +12,8 @@
   flex: none;
   width: 132px;
 }
+
+.nav {
+  display: flex;
+  flex: none;
+}

@@ -1,4 +1,6 @@
 import { type KeyboardEvent, useRef } from 'react';
+import { historyKey } from '../../lib/history';
+import { IS_MAC, isEditable } from '../../lib/platform';
 import { requestNewFolder } from '../../stores/fileOps';
 import type { PaneId } from '../../stores/paneTypes';
 import { usePanes } from '../../stores/panes';
@@ -15,6 +17,14 @@ export function Pane({ paneId }: { paneId: PaneId }) {
   const pathBar = useRef<PathBarHandle>(null);
 
   const onKeyDown = (event: KeyboardEvent) => {
+    const nav = historyKey(event, IS_MAC);
+    // Alt+←/→ moves by word in text fields; leave editing alone.
+    if (nav && !(event.altKey && isEditable(event.target))) {
+      event.preventDefault();
+      if (nav === 'back') usePanes.getState().goBack(paneId);
+      else usePanes.getState().goForward(paneId);
+      return;
+    }
     if (!(event.metaKey || event.ctrlKey)) return;
     const key = event.key.toLowerCase();
     if (key === 'l') {

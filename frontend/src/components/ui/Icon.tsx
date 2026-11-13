@@ -9,6 +9,7 @@ const PATHS = {
   refresh: 'M13 8a5 5 0 1 1-1.6-3.7M13 2.5v3h-3',
   newFolder:
     'M1.75 4.25a1 1 0 0 1 1-1h3.1l1.4 1.5h5a1 1 0 0 1 1 1v1.5M1.75 4.25v7.5a1 1 0 0 0 1 1h5.5M12 9.5v4M10 11.5h4',
+  chevronLeft: 'M10 3.5L5.5 8 10 12.5',
   chevronRight: 'M6 3.5L10.5 8 6 12.5',
   chevronDown: 'M3.5 6L8 10.5 12.5 6',
   sortUp: 'M4 10l4-4 4 4',
