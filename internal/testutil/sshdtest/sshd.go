@@ -131,7 +131,7 @@ PubkeyAuthentication yes
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 Subsystem sftp internal-sftp
-LogLevel ERROR
+LogLevel INFO
 %s
 `, port, hostKeys, filepath.Join(dir, "sshd.pid"), s.authFile, u.Username, o.ExtraConfig)
 		if err := os.WriteFile(cfgPath, []byte(cfg), 0o600); err != nil {
@@ -179,7 +179,9 @@ func freePort(t testing.TB) int {
 	return ln.Addr().(*net.TCPAddr).Port
 }
 
-// run starts sshd and waits until it accepts connections.
+// run starts sshd and waits until it reports listening on port. Readiness comes from sshd's own
+// log, not a dial: parallel tests pick ports that can collide, and a dial would happily succeed
+// against another test's server while ours exits on the failed bind.
 func run(cfgPath, logPath string, port int) (stop func(), err error) {
 	logf, err := os.Create(logPath)
 	if err != nil {
@@ -207,7 +209,7 @@ func run(cfgPath, logPath string, port int) (stop func(), err error) {
 		})
 	}
 
-	addr := net.JoinHostPort("127.0.0.1", strconv.Itoa(port))
+	listening := fmt.Sprintf("Server listening on 127.0.0.1 port %d.", port)
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
 		select {
@@ -217,14 +219,11 @@ func run(cfgPath, logPath string, port int) (stop func(), err error) {
 			return nil, fmt.Errorf("sshd exited early: %s", strings.TrimSpace(string(b)))
 		default:
 		}
-		d := net.Dialer{Timeout: time.Second}
-		c, derr := d.DialContext(context.Background(), "tcp", addr)
-		if derr == nil {
-			_ = c.Close()
+		if b, _ := os.ReadFile(logPath); bytes.Contains(b, []byte(listening)) {
 			return stop, nil
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
 	stop()
-	return nil, fmt.Errorf("sshd did not listen on %s", addr)
+	return nil, fmt.Errorf("sshd did not report listening on port %d", port)
 }
