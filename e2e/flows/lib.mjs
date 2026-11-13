@@ -1,12 +1,12 @@
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 
 export const E2E_DIR = process.env.E2E_DIR;
 export const HOME = `${E2E_DIR}/home`;
 
 /** Runs a named flow with a fresh page, screenshots on failure, exit code 1 on error. */
-export async function flow(name, fn) {
-  const browser = await chromium.launch();
+export async function flow(name, fn, { engine = 'chromium' } = {}) {
+  const browser = await (engine === 'webkit' ? webkit : chromium).launch();
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
