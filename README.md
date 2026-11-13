@@ -67,7 +67,16 @@ CI sets `PORTUNUS_REQUIRE_INTEGRATION=1`, which turns integration-test skips (mi
 - `PORTUNUS_S3_IMAGE`: S3-compatible server image for the S3 tests and e2e (default `rustfs/rustfs:1.0.5`).
 - `PORTUNUS_REQUIRE_INTEGRATION`: when set, integration tests fail instead of skipping if sshd, ssh, or Docker is missing.
 
-App data lives in `~/Library/Application Support/Portunus` (macOS) or `~/.config/Portunus` (Linux): `settings.json`, `profiles.json`, and a fallback `known_hosts`.
+### App data
+
+The XDG layout is used on macOS and Linux alike. A relative `XDG_*` value is ignored, as the spec says.
+
+| | Location | Contents |
+|---|---|---|
+| Config | `$XDG_CONFIG_HOME/portunus`, else `~/.config/portunus` | `settings.json`, `profiles.json`, fallback `known_hosts` |
+| State | `$XDG_STATE_HOME/portunus`, else `~/.local/state/portunus` | `state.json`: the main window's size, position and maximised flag |
+
+Files are JSON, written atomically. Secrets (S3 secret keys) stay in the OS keychain, never in these files. The window reopens where you left it; if its monitor is gone it is centered on the primary screen. On Linux Wayland only the size is restored, because compositors place windows themselves.
 
 ## Layout
 
@@ -82,8 +91,11 @@ internal/vfs/s3fs        S3 (aws-sdk-go-v2, own multipart writer)
 internal/sshcfg          ~/.ssh/config host list, ssh -G resolution
 internal/sshconn         SSH dialing, auth, known_hosts, ProxyJump
 internal/prompt          backend → UI questions (host key, secrets, conflicts)
+internal/appdirs         config and state directories (XDG on every platform)
 internal/profiles        S3 profiles + keychain secrets
 internal/settings        user preferences
+internal/state           window geometry: persistence, placement on connected screens
+internal/atomicfile      temp-file-and-rename writes
 frontend/                React + Vite app (pnpm, oxlint, oxfmt, vitest)
 e2e/                     end-to-end harness
 build/                   platform build assets and Taskfiles

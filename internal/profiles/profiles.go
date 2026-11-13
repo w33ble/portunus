@@ -4,7 +4,8 @@ package profiles
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/w33ble/portunus/internal/atomicfile"
 	"github.com/w33ble/portunus/internal/vfs/s3fs"
 )
 
@@ -21,12 +23,12 @@ const fileName = "profiles.json"
 type S3Profile struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
-	Profile     string `json:"profile,omitempty"`
-	AccessKeyID string `json:"accessKeyId,omitempty"`
-	Region      string `json:"region,omitempty"`
-	Endpoint    string `json:"endpoint,omitempty"`
-	PathStyle   bool   `json:"pathStyle,omitempty"`
-	Bucket      string `json:"bucket,omitempty"`
+	Profile     string `json:"profile,omitzero"`
+	AccessKeyID string `json:"accessKeyId,omitzero"`
+	Region      string `json:"region,omitzero"`
+	Endpoint    string `json:"endpoint,omitzero"`
+	PathStyle   bool   `json:"pathStyle,omitzero"`
+	Bucket      string `json:"bucket,omitzero"`
 }
 
 type fileData struct {
@@ -164,28 +166,12 @@ func (s *Store) write(list []S3Profile) error {
 	if list == nil {
 		list = []S3Profile{}
 	}
-	b, err := json.MarshalIndent(fileData{S3: list}, "", "  ")
+	b, err := json.Marshal(fileData{S3: list}, jsontext.WithIndent("  "))
 	if err != nil {
 		return fmt.Errorf("profiles: encode: %w", err)
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(s.path), ".profiles-*.tmp")
-	if err != nil {
-		return fmt.Errorf("profiles: temp file: %w", err)
-	}
-	defer func() { _ = os.Remove(tmp.Name()) }()
-	if err := tmp.Chmod(0o600); err != nil && !errors.Is(err, errors.ErrUnsupported) {
-		_ = tmp.Close()
-		return fmt.Errorf("profiles: chmod: %w", err)
-	}
-	if _, err := tmp.Write(b); err != nil {
-		_ = tmp.Close()
-		return fmt.Errorf("profiles: write: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("profiles: close: %w", err)
-	}
-	if err := os.Rename(tmp.Name(), s.path); err != nil {
-		return fmt.Errorf("profiles: replace %s: %w", s.path, err)
+	if err := atomicfile.Write(s.path, b); err != nil {
+		return fmt.Errorf("profiles: write %s: %w", s.path, err)
 	}
 	return nil
 }

@@ -2,7 +2,7 @@ package services
 
 import (
 	"context"
-	"encoding/json"
+	"encoding/json/v2"
 	"errors"
 
 	"github.com/w33ble/portunus/internal/prompt"
