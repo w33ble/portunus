@@ -88,3 +88,11 @@ frontend/                React + Vite app (pnpm, oxlint, oxfmt, vitest)
 e2e/                     end-to-end harness
 build/                   platform build assets and Taskfiles
 ```
+
+## License
+
+Portunus is licensed under the [Mozilla Public License 2.0](LICENSE) (MPL-2.0). You can use it, and combine it with code under other licenses, but changes to Portunus's own source files must be shared under the same license.
+
+Per MPL-2.0 Exhibit A, this notice covers every source file in the repository:
+
+> This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
