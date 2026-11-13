@@ -5,6 +5,8 @@
 }
 
 .scroller {
+  --cols: minmax(0, 1fr) 84px 132px;
+
   position: relative;
   height: 100%;
   overflow: auto;
@@ -174,6 +176,29 @@
 
 .size {
   text-align: right;
+}
+
+/* Narrow panes drop Modified, then Size, so Name keeps room. */
+@container (width < 440px) {
+  .scroller {
+    --cols: minmax(0, 1fr) 84px;
+  }
+
+  .headModified,
+  .modified {
+    display: none;
+  }
+}
+
+@container (width < 320px) {
+  .scroller {
+    --cols: minmax(0, 1fr);
+  }
+
+  .headSize,
+  .size {
+    display: none;
+  }
 }
 
 .empty {

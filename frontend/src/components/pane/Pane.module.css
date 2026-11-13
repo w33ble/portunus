@@ -1,6 +1,9 @@
+/* Size container: the header and file list adapt to the pane's width, not the window's. */
 .pane {
+  container-type: inline-size;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   background: var(--bg);

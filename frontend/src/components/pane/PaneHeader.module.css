@@ -4,6 +4,7 @@
   gap: 6px;
   height: 36px;
   padding: 0 8px;
+  overflow: hidden;
   border-bottom: 1px solid var(--border);
   background: var(--bg-chrome-active);
 }
@@ -11,6 +12,12 @@
 .picker {
   flex: none;
   width: 132px;
+}
+
+@container (width < 440px) {
+  .picker {
+    width: 104px;
+  }
 }
 
 .nav {
