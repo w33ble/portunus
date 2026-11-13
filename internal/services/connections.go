@@ -14,9 +14,12 @@ type ConnectionService struct {
 
 // SSHHosts lists aliases from ~/.ssh/config (Include-aware, patterns skipped).
 func (s *ConnectionService) SSHHosts() ([]sshcfg.Host, error) {
-	path, err := sshcfg.DefaultConfigPath()
-	if err != nil {
-		return nil, err
+	path := s.app.sshConfig
+	if path == "" {
+		var err error
+		if path, err = sshcfg.DefaultConfigPath(); err != nil {
+			return nil, err
+		}
 	}
 	return sshcfg.ListHosts(path)
 }

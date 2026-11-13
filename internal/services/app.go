@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 	"sync/atomic"
 	"time"
@@ -47,7 +48,8 @@ type App struct {
 	settings  *settings.Store
 	profiles  *profiles.Store
 	resolver  sshcfg.Resolver
-	sshErr    error // non-nil when no ssh binary was found
+	sshErr    error  // non-nil when no ssh binary was found
+	sshConfig string // explicit config file (PORTUNUS_SSH_CONFIG); "" means ssh's defaults
 	dialer    atomic.Pointer[sshconn.Dialer]
 	reg       *registry
 	engine    *transfer.Engine
@@ -74,7 +76,10 @@ func New(cfg Config) (*App, error) {
 	if err != nil {
 		a.sshErr = fmt.Errorf("OpenSSH client not found; SSH connections need the ssh binary: %w", err)
 	}
-	a.resolver = sshcfg.Resolver{SSHPath: sshPath}
+	// An explicit config is passed to `ssh -G -F`, which also skips /etc/ssh/ssh_config,
+	// so it's opt-in for non-default setups and tests only.
+	a.sshConfig = os.Getenv("PORTUNUS_SSH_CONFIG")
+	a.resolver = sshcfg.Resolver{SSHPath: sshPath, ConfigPath: a.sshConfig}
 	a.applySettings(a.settings.Get())
 
 	a.reg = newRegistry(localfs.New(), a.dial, func(conns []Connection) {
