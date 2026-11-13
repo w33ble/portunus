@@ -81,7 +81,13 @@ description = "Everything CI should run"
 depends = ["lint", "typecheck", "test"]
 run = ["golangci-lint fmt --diff ./...", "pnpm --dir frontend fmt:check"]
 
+[tasks."e2e:install"]
+dir = "e2e"
+run = "pnpm install --frozen-lockfile"
+sources = ["package.json", "pnpm-lock.yaml"]
+outputs = ["node_modules/.pnpm/lock.yaml"]
+
 [tasks.e2e]
 description = "End-to-end smoke: real sshd + RustFS + server-mode build + Playwright in Docker (Linux)"
-depends = ["frontend:build"]
+depends = ["frontend:build", "e2e:install"]
 run = "bash e2e/run.sh"

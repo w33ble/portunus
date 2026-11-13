@@ -36,7 +36,9 @@ mkdir -p "$H/.ssh" "$E2E_DIR/config" "$E2E_DIR/remote" "$E2E_DIR/sshd" "$H/Docum
 chmod 700 "$H/.ssh"
 ssh-keygen -q -t ed25519 -N '' -f "$H/.ssh/id_ed25519"
 ssh-keygen -q -t ed25519 -N '' -f "$E2E_DIR/sshd/host_ed25519"
-cp "$H/.ssh/id_ed25519.pub" "$E2E_DIR/sshd/authorized_keys"
+# A passphrase-protected key makes the app ask for the passphrase.
+ssh-keygen -q -t ed25519 -N e2epass -f "$H/.ssh/id_locked"
+cat "$H/.ssh/id_ed25519.pub" "$H/.ssh/id_locked.pub" >"$E2E_DIR/sshd/authorized_keys"
 
 cat >"$E2E_DIR/sshd/sshd_config" <<EOF
 Port $SSH_PORT
@@ -59,6 +61,15 @@ Host testbox
   User $(id -un)
   IdentityFile $H/.ssh/id_ed25519
   UserKnownHostsFile $H/.ssh/known_hosts
+
+# Own known_hosts so the host key prompt is still new after the sftp flow trusted testbox.
+Host locked
+  HostName 127.0.0.1
+  Port $SSH_PORT
+  User $(id -un)
+  IdentityFile $H/.ssh/id_locked
+  IdentitiesOnly yes
+  UserKnownHostsFile $H/.ssh/known_hosts_locked
 EOF
 
 echo "hello from portunus" >"$H/Documents/hello.txt"
@@ -96,9 +107,9 @@ rm -rf "$OUT" && mkdir -p "$OUT"
 status=0
 docker run --rm --network host --user "$(id -u):$(id -g)" -e HOME=/tmp \
   -v "$ROOT/e2e:/work" -v "$OUT:/out" -v "$E2E_DIR:$E2E_DIR" -w /work \
-  -e APP_URL="http://127.0.0.1:$APP_PORT/" -e E2E_DIR="$E2E_DIR" \
+  -e E2E_FLOWS="${E2E_FLOWS:-sftp contrast s3 dialogs}" -e APP_URL="http://127.0.0.1:$APP_PORT/" -e E2E_DIR="$E2E_DIR" \
   -e S3_ENDPOINT="http://$S3_ADDR" -e S3_USER=$S3_USER -e S3_PASS=$S3_PASS \
-  "$PW_IMAGE" bash -c '[ -d node_modules/playwright ] || npm i --no-save --silent playwright@1.65.0; node flows/sftp.mjs && node flows/s3.mjs && node flows/dialogs.mjs' || status=$?
+  "$PW_IMAGE" bash -c 'for f in $E2E_FLOWS; do node flows/$f.mjs || exit 1; done' || status=$?
 
 if [[ $status -ne 0 ]]; then
   echo "== server log"; tail -50 "$E2E_DIR/server.log"

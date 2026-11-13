@@ -1,0 +1,111 @@
+import { AxeBuilder } from '@axe-core/playwright';
+import { writeFileSync } from 'node:fs';
+
+/** WCAG 2.x minimums. Disabled controls are exempt from AA but must stay legible, so they get the UI-component floor. */
+export const MIN = { text: 4.5, placeholder: 4.5, icon: 3, disabled: 3 };
+
+/** Runs in the page: every piece of text and every icon inside the open dialog, with its colours composited over whatever is behind it. */
+function measureDialog() {
+  const channels = (s) => (s.match(/-?[\d.]+%?/g) ?? []).map((n) => (n.endsWith('%') ? parseFloat(n) / 100 : parseFloat(n)));
+  const parse = (s) => {
+    const n = channels(s);
+    const scale = s.startsWith('color(') ? 255 : 1;
+    return [n[0] * scale, n[1] * scale, n[2] * scale, n[3] ?? 1];
+  };
+  const over = (top, under) => {
+    const a = top[3];
+    return [0, 1, 2].map((i) => top[i] * a + under[i] * (1 - a)).concat(1);
+  };
+  const lum = (c) => {
+    const [r, g, b] = c.slice(0, 3).map((v) => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const ratio = (a, b) => {
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  const backdrop = (el) => {
+    const layers = [];
+    for (let e = el; e; e = e.parentElement) {
+      const bg = parse(getComputedStyle(e).backgroundColor);
+      if (bg[3] > 0) layers.push(bg);
+      if (bg[3] === 1) break;
+    }
+    return layers.reduceRight((under, layer) => over(layer, under), [255, 255, 255, 1]);
+  };
+  const rows = [];
+  const add = (kind, el, text, fgCss) => {
+    const bg = backdrop(el);
+    const fg = over(parse(fgCss), bg);
+    const hex = (c) => '#' + c.slice(0, 3).map((v) => Math.round(v).toString(16).padStart(2, '0')).join('');
+    rows.push({ kind, text: text.trim().slice(0, 48), fg: hex(fg), bg: hex(bg), ratio: Math.round(ratio(fg, bg) * 100) / 100 });
+  };
+  const visible = (el) => {
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility === 'visible';
+  };
+
+  const dialog = document.querySelector('dialog[open]');
+  const walker = document.createTreeWalker(dialog, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    const el = n.parentElement;
+    if (!n.textContent.trim() || !visible(el)) continue;
+    add(el.closest(':disabled') ? 'disabled' : 'text', el, n.textContent, getComputedStyle(el).color);
+  }
+  for (const input of dialog.querySelectorAll('input[placeholder]')) {
+    if (input.value === '' && visible(input)) {
+      add(input.disabled ? 'disabled' : 'placeholder', input, input.placeholder, getComputedStyle(input, '::placeholder').color);
+    }
+  }
+  for (const svg of dialog.querySelectorAll('button:not(:disabled) svg')) {
+    if (visible(svg)) add('icon', svg, svg.closest('button').getAttribute('aria-label') ?? 'icon', getComputedStyle(svg).color);
+  }
+  return rows;
+}
+
+/** Collects violations across a whole flow so one run reports every failing dialog. */
+export function contrastAudit(page) {
+  const failures = [];
+  const report = [];
+
+  return {
+    /** Checks the open dialog in light and dark. axe covers enabled text; the custom pass covers what axe skips. */
+    async check(label) {
+      for (const scheme of ['light', 'dark']) {
+        await page.emulateMedia({ colorScheme: scheme });
+        await page.mouse.move(0, 0);
+        await page.waitForTimeout(300); // button background transitions
+        const where = `${label} [${scheme}]`;
+        const before = failures.length;
+
+        const axe = await new AxeBuilder({ page }).include('dialog[open]').withRules(['color-contrast']).analyze();
+        for (const v of axe.violations) {
+          for (const node of v.nodes) {
+            const d = node.any[0]?.data ?? {};
+            failures.push(`${where}: axe ${node.target} ${d.fgColor} on ${d.bgColor} = ${d.contrastRatio}:1 (needs ${d.expectedContrastRatio})`);
+          }
+        }
+
+        const rows = await page.evaluate(measureDialog);
+        for (const r of rows) {
+          report.push({ dialog: label, scheme, ...r });
+          if (r.kind !== 'text' && r.ratio < MIN[r.kind]) {
+            failures.push(`${where}: ${r.kind} “${r.text}” ${r.fg} on ${r.bg} = ${r.ratio}:1 (needs ${MIN[r.kind]})`);
+          }
+        }
+        if (failures.length > before) {
+          await page.screenshot({ path: `/out/contrast-${label.replace(/\W+/g, '-')}-${scheme}.png` });
+        }
+      }
+    },
+
+    /** Writes the full measurement table and throws if anything failed. */
+    finish() {
+      writeFileSync('/out/contrast.json', JSON.stringify(report, null, 1));
+      if (failures.length) throw new Error(`${failures.length} contrast failure(s):\n${failures.join('\n')}`);
+    },
+  };
+}

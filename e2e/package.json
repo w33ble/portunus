@@ -1,0 +1,12 @@
+{
+  "name": "portunus-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MPL-2.0",
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "playwright": "^1.65.0"
+  }
+}
