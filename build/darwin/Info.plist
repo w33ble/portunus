@@ -25,5 +25,17 @@
             <string>true</string>
         <key>NSHumanReadableCopyright</key>
             <string>© 2026 Joe Fleming</string>
+        <key>NSDesktopFolderUsageDescription</key>
+            <string>Portunus lists and transfers files you choose in your Desktop folder.</string>
+        <key>NSDocumentsFolderUsageDescription</key>
+            <string>Portunus lists and transfers files you choose in your Documents folder.</string>
+        <key>NSDownloadsFolderUsageDescription</key>
+            <string>Portunus lists and transfers files you choose in your Downloads folder.</string>
+        <key>NSRemovableVolumesUsageDescription</key>
+            <string>Portunus lists and transfers files you choose on removable drives.</string>
+        <key>NSNetworkVolumesUsageDescription</key>
+            <string>Portunus lists and transfers files you choose on network volumes.</string>
+        <key>NSLocalNetworkUsageDescription</key>
+            <string>Portunus connects to SFTP and S3 servers on your local network.</string>
     </dict>
 </plist>
