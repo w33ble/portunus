@@ -227,7 +227,12 @@ func (w *writer) ReadFrom(r io.Reader) (int64, error) {
 }
 
 func (w *writer) startUpload() error {
-	out, err := w.client.CreateMultipartUpload(w.ctx, &s3.CreateMultipartUploadInput{
+	// Not w.ctx: if Abort cancels mid-request, the server may still create the upload, and without
+	// its ID nothing could abort it (orphaned multipart uploads are billed). Finish the request,
+	// then abort below if the writer was aborted meanwhile.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(w.parent), abortTimeout)
+	defer cancel()
+	out, err := w.client.CreateMultipartUpload(ctx, &s3.CreateMultipartUploadInput{
 		Bucket: aws.String(w.loc.bucket),
 		Key:    aws.String(w.loc.key),
 	})
