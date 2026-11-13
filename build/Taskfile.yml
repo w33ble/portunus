@@ -166,6 +166,20 @@ tasks:
     cmds:
       - wails3 generate icons -input appicon.png -macfilename darwin/icons.icns -windowsfilename windows/icon.ico -iconcomposerinput appicon.icon -macassetdir darwin
 
+  generate:notices:
+    summary: Writes THIRD_PARTY_NOTICES.md (Go + npm dependency licenses) for packages and releases
+    run: once
+    deps:
+      - task: install:frontend:deps
+    sources:
+      - go.sum
+      - frontend/pnpm-lock.yaml
+      - build/release/*
+    generates:
+      - THIRD_PARTY_NOTICES.md
+    cmds:
+      - bash build/release/third-party-notices.sh THIRD_PARTY_NOTICES.md
+
   dev:frontend:
     summary: Runs the frontend in development mode
     deps:

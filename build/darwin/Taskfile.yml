@@ -47,7 +47,7 @@ tasks:
       - wails3 tool prepare-macos-output --dir "{{.BIN_DIR}}"
       - '{{if eq .OBFUSCATED "true"}}garble {{.GARBLE_ARGS}} build{{else}}go build{{end}} {{.BUILD_FLAGS}} -o "{{.OUTPUT}}"'
     vars:
-      BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l"{{else}}-tags production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s"{{end}}'
+      BUILD_FLAGS: '{{if eq .DEV "true"}}{{if or .EXTRA_TAGS (eq .OBFUSCATED "true")}}-tags {{if eq .OBFUSCATED "true"}}wails_obfuscated{{if .EXTRA_TAGS}},{{end}}{{end}}{{.EXTRA_TAGS}} {{end}}-buildvcs=false -gcflags=all="-l" -ldflags="{{.VERSION_LDFLAGS}}"{{else}}-tags production{{if eq .OBFUSCATED "true"}},wails_obfuscated{{end}}{{if .EXTRA_TAGS}},{{.EXTRA_TAGS}}{{end}} -trimpath -buildvcs=false -ldflags="-w -s {{.VERSION_LDFLAGS}}"{{end}}'
       DEFAULT_OUTPUT: '{{.BIN_DIR}}/{{.APP_NAME}}'
       OUTPUT: '{{ .OUTPUT | default .DEFAULT_OUTPUT }}'
     env:
@@ -121,6 +121,7 @@ tasks:
     summary: Packages the application into a `.app` bundle
     deps:
       - task: build
+      - task: common:generate:notices
     cmds:
       - task: create:app:bundle
 
@@ -128,6 +129,7 @@ tasks:
     summary: Packages darwin universal binary (arm64 + amd64)
     deps:
       - task: build:universal
+      - task: common:generate:notices
     cmds:
       - task: create:app:bundle
 
@@ -174,6 +176,13 @@ tasks:
         fi
       - cp "{{.BIN_DIR}}/{{.APP_NAME}}" "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/MacOS"
       - cp build/darwin/Info.plist "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents"
+      - cmd: plutil -replace CFBundleShortVersionString -string "{{.VERSION}}" "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/Info.plist" && plutil -replace CFBundleVersion -string "{{.VERSION}}" "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/Info.plist"
+        platforms: [darwin]
+      - cp LICENSE "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/Resources/"
+      - |
+        if [ -f THIRD_PARTY_NOTICES.md ]; then
+          cp THIRD_PARTY_NOTICES.md "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/Resources/"
+        fi
       - task: '{{if eq OS "darwin"}}codesign:adhoc{{else}}codesign:skip{{end}}'
 
   codesign:adhoc:
@@ -203,6 +212,8 @@ tasks:
         fi
       - cp "{{.BIN_DIR}}/{{.APP_NAME}}" "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/MacOS"
       - cp "build/darwin/Info.dev.plist" "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/Info.plist"
+      - plutil -replace CFBundleShortVersionString -string "{{.VERSION}}" "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/Info.plist"
+      - plutil -replace CFBundleVersion -string "{{.VERSION}}" "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/Info.plist"
       - xattr -cr "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app"
       - codesign --force --deep --sign - "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app"
       - codesign --verify --deep --strict "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app"

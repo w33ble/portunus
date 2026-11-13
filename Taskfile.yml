@@ -10,6 +10,22 @@ vars:
   # tasks below dispatch to the matching platform Taskfile via this variable.
   GOOS: '{{.GOOS | default OS}}'
 
+  # Version stamping. Release builds set PORTUNUS_VERSION (e.g. 1.2.0, no "v"); every other build
+  # is a dev build named for its commit, with -dirty when the tree has uncommitted changes.
+  COMMIT:
+    sh: git rev-parse --short=7 HEAD 2>/dev/null || echo unknown
+  DIRTY:
+    sh: git diff --quiet HEAD -- 2>/dev/null && echo "" || echo "-dirty"
+  VERSION: '{{if .PORTUNUS_VERSION}}{{.PORTUNUS_VERSION}}{{else}}dev-{{.COMMIT}}{{.DIRTY}}{{end}}'
+  # deb/rpm need a version that sorts: real releases as-is, dev builds as 0.0.0-dev+<commit>.
+  PACKAGE_VERSION: '{{if .PORTUNUS_VERSION}}{{.PORTUNUS_VERSION}}{{else}}0.0.0-dev+{{.COMMIT}}{{end}}'
+  BUILD_DATE:
+    sh: date -u +%Y-%m-%dT%H:%M:%SZ
+  VERSION_LDFLAGS: >-
+    -X github.com/w33ble/portunus/internal/version.version={{.VERSION}}
+    -X github.com/w33ble/portunus/internal/version.commit={{.COMMIT}}
+    -X github.com/w33ble/portunus/internal/version.date={{.BUILD_DATE}}
+
 includes:
   common: ./build/Taskfile.yml
   windows: ./build/windows/Taskfile.yml

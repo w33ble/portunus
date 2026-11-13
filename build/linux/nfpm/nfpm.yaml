@@ -6,10 +6,10 @@
 name: "portunus"
 arch: ${GOARCH}
 platform: "linux"
-version: "0.1.0"
+version: "${PACKAGE_VERSION}"
 section: "default"
 priority: "extra"
-maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
+maintainer: "Joe Fleming <github@joefleming.net>"
 description: "SFTP and S3 file transfer client"
 vendor: "Joe Fleming"
 homepage: "https://github.com/w33ble/portunus"
@@ -23,6 +23,10 @@ contents:
     dst: "/usr/share/icons/hicolor/512x512/apps/portunus.png"
   - src: "./build/linux/portunus.desktop"
     dst: "/usr/share/applications/portunus.desktop"
+  - src: "./LICENSE"
+    dst: "/usr/share/doc/portunus/LICENSE"
+  - src: "./THIRD_PARTY_NOTICES.md"
+    dst: "/usr/share/doc/portunus/THIRD_PARTY_NOTICES.md"
 
 # Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
 depends:

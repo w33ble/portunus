@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react';
+import * as api from '../../api';
+import type { VersionInfo } from '../../api/types';
 import { useSettings } from '../../stores/settings';
 import controls from '../ui/controls.module.css';
 import { Modal } from '../ui/Modal';
@@ -8,6 +11,11 @@ const IS_MAC = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platfor
 export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const settings = useSettings((s) => s.settings);
   const save = useSettings((s) => s.save);
+  const [build, setBuild] = useState<VersionInfo | null>(null);
+
+  useEffect(() => {
+    api.version.info().then(setBuild, () => setBuild(null));
+  }, []);
 
   return (
     <Modal
@@ -49,6 +57,15 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           )}
           <TransferLimitsFields />
         </>
+      )}
+      {build !== null && (
+        <p className={controls.hint}>
+          Portunus {build.version}
+          {build.commit !== '' &&
+            !build.version.includes(build.commit) &&
+            ` (${build.commit})`} ·{' '}
+          {build.go}
+        </p>
       )}
     </Modal>
   );

@@ -4,6 +4,7 @@ import {
   PromptService,
   SettingsService,
   TransferService,
+  VersionService,
 } from '../../bindings/github.com/w33ble/portunus/internal/services';
 import type { ConflictAnswer } from '../../bindings/github.com/w33ble/portunus/internal/prompt';
 import { Policy, TargetKind } from './enums';
@@ -17,6 +18,7 @@ import type {
   Pending,
   S3Profile,
   Settings,
+  VersionInfo,
   Target,
 } from './types';
 
@@ -100,4 +102,8 @@ export const prompts = {
 export const settings = {
   get: (): Promise<Settings> => call(SettingsService.Get()),
   save: (next: Settings): Promise<Settings> => call(SettingsService.Save(next)),
+};
+
+export const version = {
+  info: (): Promise<VersionInfo> => call(VersionService.Info()),
 };

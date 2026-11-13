@@ -24,3 +24,4 @@ export type { Entry } from '../../bindings/github.com/w33ble/portunus/internal/v
 export type { Settings } from '../../bindings/github.com/w33ble/portunus/internal/settings';
 export type { S3Profile } from '../../bindings/github.com/w33ble/portunus/internal/profiles';
 export type { Host } from '../../bindings/github.com/w33ble/portunus/internal/sshcfg';
+export type { Info as VersionInfo } from '../../bindings/github.com/w33ble/portunus/internal/version';
