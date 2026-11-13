@@ -25,6 +25,14 @@ run = "wails3 package"
 description = "Regenerate TypeScript bindings from Go services"
 run = "wails3 generate bindings -f '-tags purego' -clean=true -ts -i"
 
+[tasks.icons]
+description = "Regenerate app icons from build/icon/master-1024.png (needs ImageMagick 7; Assets.car only on macOS)"
+run = [
+  "bash build/icon/make-icons.sh",
+  "cd build && wails3 generate icons -input appicon.png -macfilename darwin/icons.icns -windowsfilename windows/icon.ico -iconcomposerinput appicon.icon -macassetdir darwin",
+  "cd build && wails3 generate icons -input darwin/dmg-file-icon.png -macfilename darwin/dmg-file-icon.icns -windowsfilename \"$(mktemp -d)/unused.ico\"",
+]
+
 [tasks."frontend:install"]
 dir = "frontend"
 run = "pnpm install --frozen-lockfile"
