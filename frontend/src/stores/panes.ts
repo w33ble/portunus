@@ -6,9 +6,9 @@ import {
   EMPTY_LISTING,
   type Listing,
   applyPage,
-  applyTotal,
   createPageBatcher,
-  isComplete,
+  failListing,
+  finishListing,
   shownEntries,
   startListing,
 } from '../lib/listing';
@@ -80,7 +80,7 @@ let requestCounter = 0;
 
 /** Pane in loading state turns ready exactly when its listing is complete. */
 function settle(pane: PaneState): PaneState {
-  return pane.status.kind === 'loading' && isComplete(pane.listing)
+  return pane.status.kind === 'loading' && pane.listing.done
     ? { ...pane, status: { kind: 'ready' } }
     : pane;
 }
@@ -114,26 +114,22 @@ export const usePanes = create<PanesState>()((set, get) => {
       selection: mode === 'refresh' ? pane.selection : EMPTY_SELECTION,
     }));
 
-    const handle = api.files.list(connId, path, requestId);
+    const handle = api.files.list(connId, path, (entries) => pageBatcher.push(requestId, entries));
     inflight[id] = handle;
 
-    handle.total.then(
-      (total) => {
+    handle.done.then(
+      () => {
         if (!isCurrent(id, requestId)) return;
         pageBatcher.flush();
-        patch(id, (pane) =>
-          settle({ ...pane, listing: applyTotal(pane.listing, requestId, total) })
-        );
+        patch(id, (pane) => settle({ ...pane, listing: finishListing(pane.listing, requestId) }));
       },
       (e: unknown) => {
         if (isCanceled(e) || !isCurrent(id, requestId)) return;
+        pageBatcher.flush();
         patch(id, (pane) => ({
           ...pane,
           status: { kind: 'error', error: toAppError(e) },
-          listing:
-            pane.listing.replacing === null
-              ? { ...pane.listing, total: pane.listing.entries.length }
-              : pane.listing,
+          listing: failListing(pane.listing, requestId),
         }));
       }
     );
@@ -210,11 +206,8 @@ export const usePanes = create<PanesState>()((set, get) => {
           const pane = next[id];
           const entries = batch.get(pane.listing.requestId);
           if (entries === undefined) continue;
-          const updated = settle({
-            ...pane,
-            listing: applyPage(pane.listing, pane.listing.requestId, entries),
-          });
-          next = { ...next, [id]: updated };
+          const listing = applyPage(pane.listing, pane.listing.requestId, entries);
+          next = { ...next, [id]: { ...pane, listing } };
         }
         return next === s.panes ? s : { panes: next };
       });
@@ -227,7 +220,7 @@ export const usePanes = create<PanesState>()((set, get) => {
     dismissError(id) {
       patch(id, (pane) =>
         pane.status.kind === 'error'
-          ? { ...pane, status: isComplete(pane.listing) ? { kind: 'ready' } : { kind: 'idle' } }
+          ? { ...pane, status: pane.listing.done ? { kind: 'ready' } : { kind: 'idle' } }
           : pane
       );
     },
@@ -238,11 +231,6 @@ const pageBatcher = createPageBatcher(
   (batch) => usePanes.getState().applyPages(batch),
   PAGE_FLUSH_MS
 );
-
-/** Entry point for `files:page` events. */
-export function receivePage(requestId: string, entries: readonly Entry[]): void {
-  pageBatcher.push(requestId, entries);
-}
 
 function localTarget(): Target {
   return api.targets.local();

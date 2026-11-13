@@ -14,21 +14,41 @@ type FileService struct {
 	app *App
 }
 
-// List streams dir's entries as files:page events tagged with requestID and returns the
-// total count, so the caller knows when every page has arrived. Cancel the promise to stop.
-func (s *FileService) List(ctx context.Context, connID, dir, requestID string) (int, error) {
+// ListPage is one batch of a directory listing. The final page, which can be empty, has no Cursor.
+type ListPage struct {
+	Entries []vfs.Entry `json:"entries"`
+	// Cursor is passed to ListNext for the following page; "" means the listing is complete.
+	Cursor string `json:"cursor"`
+}
+
+// List starts listing dir and returns its first page. While the Cursor is non-empty, call
+// ListNext for more or ListClose to give up. Canceling the promise abandons the listing.
+func (s *FileService) List(ctx context.Context, connID, dir string) (ListPage, error) {
 	fs, err := s.app.reg.FS(ctx, connID)
 	if err != nil {
-		return 0, err
+		return ListPage{}, err
 	}
 
-	total := 0
-	err = fs.List(ctx, dir, func(page []vfs.Entry) error {
-		total += len(page)
-		s.app.emit(EventFilesPage, FilePage{RequestID: requestID, Entries: page})
-		return nil
-	})
-	return total, err
+	l, err := s.app.lists.start(fs, dir)
+	if err != nil {
+		return ListPage{}, err
+	}
+	return s.app.lists.pull(ctx, l)
+}
+
+// ListNext returns the page after the one that issued cursor. A listing that fails midway
+// reports its error here; the listing is then over.
+func (s *FileService) ListNext(ctx context.Context, cursor string) (ListPage, error) {
+	l, err := s.app.lists.get(cursor)
+	if err != nil {
+		return ListPage{}, err
+	}
+	return s.app.lists.pull(ctx, l)
+}
+
+// ListClose releases a listing the caller no longer wants.
+func (s *FileService) ListClose(cursor string) {
+	s.app.lists.close(cursor)
 }
 
 func (s *FileService) Stat(ctx context.Context, connID, p string) (vfs.Entry, error) {

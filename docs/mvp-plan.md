@@ -192,7 +192,7 @@ Conflicts are gated per job: the first conflict in a job prompts; other conflict
 ### Frontend
 
 - React 19 + TS + Vite, `zustand` stores (connections, panes, transfers, prompts), `@tanstack/react-virtual` for file lists. Styling: plain CSS modules with CSS custom properties for theme tokens (light/dark via `prefers-color-scheme`); no Tailwind.
-- Pane = `{connectionId, path, entries, selection, sort}`; header has connection picker + breadcrumb path. Listings render page by page as `List` streams.
+- Pane = `{connectionId, path, entries, selection, sort}`; header has connection picker + breadcrumb path. Listings render page by page as the frontend pulls them: `FileService.List` returns the first page and a cursor, `ListNext` the rest, `ListClose` abandons one (idle cursors are reaped after 60s). Events are never needed for completeness.
 - Drag pane → pane: HTML5 DnD with a custom MIME type carrying `{connectionId, paths}`; drop calls `TransferService.Start`. A pointer-event fallback is decided in the M1 spike if WebKit DnD misbehaves.
 - Drag from OS: `EnableFileDrop` (already on in `main.go`) + `data-file-drop-target` on panes; the Go `WindowFilesDropped` handler gets absolute paths + target element details.
 - Tabs: Browser | Transfers, with a status-bar summary (active count, aggregate speed) visible from the browser tab.

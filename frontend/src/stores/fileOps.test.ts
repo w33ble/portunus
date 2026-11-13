@@ -4,7 +4,7 @@ import { copyToOtherPane } from './fileOps';
 import { usePanes } from './panes';
 import { entry } from './testApi';
 import { EMPTY_SELECTION } from '../lib/selection';
-import { applyPage, applyTotal, startListing } from '../lib/listing';
+import { applyPage, finishListing, startListing } from '../lib/listing';
 
 vi.mock('../api', async () => (await import('./testApi')).createApiMock());
 
@@ -12,7 +12,7 @@ function setPane(id: 'left' | 'right', connId: string, path: string, names: stri
   const entries = names.map((n) => entry(n, false, path));
   let listing = startListing('r', null);
   listing = applyPage(listing, 'r', entries);
-  listing = applyTotal(listing, 'r', entries.length);
+  listing = finishListing(listing, 'r');
   usePanes.setState((s) => ({
     panes: {
       ...s.panes,

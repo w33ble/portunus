@@ -1,42 +1,37 @@
 import type { Entry } from '../api/types';
 
-/**
- * A streamed directory listing. FileService.List emits `files:page` events and resolves with
- * the total count; the two can arrive in either order, so the listing is complete only when
- * the received entry count reaches the total.
- */
+/** A directory listing that fills as pages are pulled from the backend. */
 export interface Listing {
   requestId: string;
   entries: readonly Entry[];
-  /** Null until the List call resolves. */
-  total: number | null;
+  /** True once the backend delivered the last page (or the listing failed). */
+  done: boolean;
   /** On refresh, the previous entries stay visible until the new listing completes. */
   replacing: readonly Entry[] | null;
 }
 
-export const EMPTY_LISTING: Listing = { requestId: '', entries: [], total: null, replacing: null };
+export const EMPTY_LISTING: Listing = { requestId: '', entries: [], done: false, replacing: null };
 
 export function startListing(requestId: string, replacing: readonly Entry[] | null): Listing {
-  return { requestId, entries: [], total: null, replacing };
-}
-
-export function isComplete(l: Listing): boolean {
-  return l.total !== null && l.entries.length >= l.total;
-}
-
-function settle(l: Listing): Listing {
-  return isComplete(l) && l.replacing !== null ? { ...l, replacing: null } : l;
+  return { requestId, entries: [], done: false, replacing };
 }
 
 /** Pages for other requests (a superseded listing) are ignored. */
 export function applyPage(l: Listing, requestId: string, entries: readonly Entry[]): Listing {
   if (requestId !== l.requestId || entries.length === 0) return l;
-  return settle({ ...l, entries: l.entries.concat(entries) });
+  return { ...l, entries: l.entries.concat(entries) };
 }
 
-export function applyTotal(l: Listing, requestId: string, total: number): Listing {
+/** The last page arrived: a refresh's new entries replace the old ones. */
+export function finishListing(l: Listing, requestId: string): Listing {
   if (requestId !== l.requestId) return l;
-  return settle({ ...l, total });
+  return { ...l, done: true, replacing: null };
+}
+
+/** A failed listing keeps what it got, except a refresh, which keeps showing the old entries. */
+export function failListing(l: Listing, requestId: string): Listing {
+  if (requestId !== l.requestId || l.replacing !== null) return l;
+  return { ...l, done: true };
 }
 
 /** What the pane renders: the old entries while a refresh is still streaming in. */

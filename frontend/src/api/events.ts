@@ -4,7 +4,6 @@ import type {
   ConflictPrompt,
   Connection,
   DropFiles,
-  FilePage,
   HostKeyPrompt,
   SecretPrompt,
   Update,
@@ -13,8 +12,6 @@ import type {
 type Unsubscribe = () => void;
 
 export const events = {
-  filesPage: (cb: (page: FilePage) => void): Unsubscribe =>
-    Events.On(names.FilesPage, (ev) => cb(ev.data)),
   transfersUpdate: (cb: (update: Update) => void): Unsubscribe =>
     Events.On(names.TransfersUpdate, (ev) => cb(ev.data)),
   connectionsChanged: (cb: (list: Connection[]) => void): Unsubscribe =>
