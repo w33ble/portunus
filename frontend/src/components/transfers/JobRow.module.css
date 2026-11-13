@@ -1,0 +1,176 @@
+.job {
+  display: grid;
+  gap: 4px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.state {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.state[data-state='running'] {
+  color: var(--accent);
+}
+
+.state[data-state='failed'] {
+  color: var(--danger);
+}
+
+.state[data-state='done'] {
+  color: var(--success);
+}
+
+.state[data-state='waiting'] {
+  color: var(--warning);
+}
+
+.route {
+  margin-left: 32px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arrow {
+  margin: 0 5px;
+  vertical-align: -2px;
+}
+
+.bar {
+  height: 4px;
+  margin: 4px 0 0 32px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--bg-press);
+}
+
+.fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
+  transition: width 250ms linear;
+}
+
+.bar[data-state='done'] .fill {
+  background: var(--success);
+}
+
+.bar[data-state='failed'] .fill {
+  background: var(--danger);
+}
+
+.bar[data-state='canceled'] .fill,
+.bar[data-state='skipped'] .fill {
+  background: var(--text-disabled);
+}
+
+.bar[data-walking='true'] .fill {
+  width: 30% !important;
+  animation: sweep 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes sweep {
+  from {
+    translate: 0;
+  }
+  to {
+    translate: 233%;
+  }
+}
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 32px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.failed {
+  color: var(--danger);
+}
+
+.details {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 0 32px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--bg-stripe);
+}
+
+.jobError {
+  margin: 0;
+  color: var(--danger);
+  overflow-wrap: anywhere;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.taskHeading {
+  margin: 0 0 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tasks {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 2fr);
+  gap: 12px;
+  font-size: 12px;
+}
+
+.taskName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskProgress {
+  color: var(--text-secondary);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.taskError {
+  color: var(--danger);
+  overflow-wrap: anywhere;
+  user-select: text;
+  -webkit-user-select: text;
+}

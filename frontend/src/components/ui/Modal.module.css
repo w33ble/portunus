@@ -1,0 +1,58 @@
+.dialog {
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 48px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--bg-chrome-active);
+  color: var(--text);
+  box-shadow: var(--shadow-dialog);
+  overflow: hidden;
+}
+
+.dialog::backdrop {
+  background: var(--scrim);
+}
+
+.dialog[open] {
+  animation: pop 140ms ease-out;
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+
+.form {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  max-height: calc(100vh - 48px);
+  padding: 18px 20px 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.body {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
+  /* Room for focus rings that would otherwise be clipped by the scroll container. */
+  margin: -4px;
+  padding: 4px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

@@ -1,28 +1,26 @@
 .app {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   height: 100%;
 }
 
-.titlebar {
-  --wails-draggable: drag;
-  padding: 10px 80px;
-  font-weight: 600;
-  text-align: center;
+.main {
+  min-height: 0;
 }
 
 .panes {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  height: 100%;
   min-height: 0;
 }
 
-.pane {
-  min-height: 0;
-  overflow: auto;
-  border-top: 1px solid var(--border);
+.panes[hidden],
+.transfers[hidden] {
+  display: none;
 }
 
-.pane + .pane {
-  border-left: 1px solid var(--border);
+.transfers {
+  height: 100%;
+  min-height: 0;
 }

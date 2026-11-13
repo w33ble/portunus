@@ -7,6 +7,8 @@ import './styles.css';
 const root = document.getElementById('root');
 if (!root) throw new Error('missing #root element');
 
+document.documentElement.dataset['platform'] = /Mac/i.test(navigator.platform) ? 'mac' : 'other';
+
 createRoot(root).render(
   <StrictMode>
     <App />

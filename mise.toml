@@ -38,9 +38,9 @@ depends = ["frontend:install", "bindings"]
 run = "pnpm --dir frontend build"
 
 [tasks.test]
-description = "Run Go tests"
+description = "Run Go and frontend tests"
 depends = ["frontend:build"]
-run = "go test -tags purego ./..."
+run = ["go test -tags purego ./...", "pnpm --dir frontend test"]
 
 [tasks."test:race"]
 description = "Run Go tests with the race detector (zig cc as the C compiler)"
