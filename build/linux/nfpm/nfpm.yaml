@@ -19,8 +19,8 @@ release: "1"
 contents:
   - src: "./bin/portunus"
     dst: "/usr/local/bin/portunus"
-  - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/portunus.png"
+  - src: "./build/linux/portunus-512.png"
+    dst: "/usr/share/icons/hicolor/512x512/apps/portunus.png"
   - src: "./build/linux/portunus.desktop"
     dst: "/usr/share/applications/portunus.desktop"
 

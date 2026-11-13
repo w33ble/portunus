@@ -1,8 +1,12 @@
-# Portunus
+<p align="center">
+  <img src="docs/icon-512.png" width="160" alt="Portunus icon: the Temple of Portunus">
+</p>
+
+<h1 align="center">Portunus</h1>
 
 Dual-pane file transfer client for SFTP and S3. Built with [Wails v3](https://v3.wails.io) (Go backend, React + TypeScript frontend). macOS first, Linux supported.
 
-Status: MVP feature-complete on the `feat/mvp` branch and covered by an automated end-to-end smoke test. Native window behavior (drag and drop in WebKit, Finder drops, titlebar) still needs a run on a real desktop. See [docs/mvp-plan.md](docs/mvp-plan.md).
+Status: MVP. It runs on macOS and Linux; there are no packaged releases yet. See [docs/mvp-plan.md](docs/mvp-plan.md).
 
 ## Features
 
@@ -40,7 +44,10 @@ mise run lint:gohawk  # gohawk static analysis: goroutine, lock, and resource-li
 mise run e2e          # end-to-end smoke (Linux, needs Docker and /usr/sbin/sshd)
 mise run fmt          # format Go and frontend
 mise run bindings     # regenerate frontend/bindings from Go services
+mise run icons        # regenerate app icons from build/icon/ (needs ImageMagick 7)
 ```
+
+App icon sources live in `build/icon/`: `master-1024.png` (transparent artwork) and `portunus.svg` (the layer of the macOS 26 Icon Composer project in `build/appicon.icon`). `mise run icons` renders the tile used for `.icns`, `.ico`, the DMG, and Linux. `build/darwin/Assets.car`, the compiled macOS 26 icon, can only be produced on macOS. Builds regenerate it there, so commit it after a macOS build when the icon changes.
 
 `frontend/bindings` and `frontend/dist` are generated and gitignored. `main.go` embeds `frontend/dist`, so Go compiles only after a frontend build; `mise run test` handles that.
 
