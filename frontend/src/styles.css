@@ -21,6 +21,7 @@
   --border: rgb(0 0 0 / 12%);
   --border-strong: rgb(0 0 0 / 22%);
   --accent: #007aff;
+  --accent-fill: #0071e3;
   --accent-text: #ffffff;
   --selection: rgb(0 122 255 / 16%);
   --selection-strong: #0a62d0;
@@ -58,6 +59,7 @@
     --border: rgb(255 255 255 / 12%);
     --border-strong: rgb(255 255 255 / 24%);
     --accent: #0a84ff;
+    --accent-fill: #0a6fdc;
     --selection: rgb(10 132 255 / 28%);
     --selection-strong: #0a5fd0;
     --selection-inactive: rgb(255 255 255 / 12%);

@@ -29,7 +29,7 @@
 }
 
 .primary {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-text);
   box-shadow:
     0 0 0 1px rgb(0 0 0 / 12%),
@@ -37,7 +37,7 @@
 }
 
 .primary:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 88%, black);
+  background: color-mix(in srgb, var(--accent-fill) 88%, black);
 }
 
 /* Like macOS, a disabled default button loses its accent; disabled text on accent is unreadable. */
