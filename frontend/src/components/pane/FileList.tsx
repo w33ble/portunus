@@ -27,7 +27,6 @@ import { useListDrop } from './useListDrop';
 
 const ROW_HEIGHT = 22;
 const HEADER_HEIGHT = 22;
-const COLUMNS = 'minmax(0, 1fr) 84px 132px';
 
 interface MenuState {
   x: number;
@@ -202,7 +201,6 @@ export function FileList({ paneId }: { paneId: PaneId }) {
       <div
         ref={scrollerRef}
         className={styles.scroller}
-        style={{ '--cols': COLUMNS } as React.CSSProperties}
         role="listbox"
         aria-multiselectable="true"
         aria-label={`Files in ${pane.path}`}
