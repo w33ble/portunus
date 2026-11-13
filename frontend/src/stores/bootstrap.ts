@@ -17,7 +17,7 @@ export function startBackend(): () => void {
     events.connectionsChanged((list) => useConnections.getState().setConnections(list)),
     events.dropFiles((drop) => {
       const target = parsePaneId(drop.pane) ?? useUi.getState().activePane;
-      dropFromOs(target, drop.paths ?? []);
+      dropFromOs(target, drop.paths ?? [], drop.dir);
     }),
     events.promptHostKey((p) => usePrompts.getState().enqueue(hostKeyPrompt(p))),
     events.promptSecret((p) => usePrompts.getState().enqueue(secretPrompt(p))),

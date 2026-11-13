@@ -120,7 +120,8 @@ func (a *App) Close() {
 	a.reg.CloseAll()
 }
 
-// HandleDrop forwards OS file drops to the frontend, tagged with the drop target's pane.
+// HandleDrop forwards OS file drops to the frontend, tagged with the drop target's pane and,
+// when dropped onto a folder name, that folder's path.
 func (a *App) HandleDrop(paths []string, attrs map[string]string) {
 	if len(paths) == 0 {
 		return
@@ -129,7 +130,7 @@ func (a *App) HandleDrop(paths []string, attrs map[string]string) {
 	for i, p := range paths {
 		norm[i] = filepath.ToSlash(p)
 	}
-	a.emit(EventDrop, DropFiles{Paths: norm, Pane: attrs["data-pane"]})
+	a.emit(EventDrop, DropFiles{Paths: norm, Pane: attrs["data-pane"], Dir: attrs["data-path"]})
 }
 
 func (a *App) applySettings(s settings.Settings) {

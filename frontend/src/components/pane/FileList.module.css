@@ -116,23 +116,35 @@
   color: inherit;
 }
 
-.row[data-drop='true'] {
+.name {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0 8px;
+}
+
+/* Icon + name. For folders this is the drop target, so the rest of the row drops into the
+   pane's current directory. Negative margin widens the hit area without shifting layout. */
+.target {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0 -6px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.target[data-drop='true'],
+.target:global(.file-drop-target-active) {
+  outline: none;
   background: var(--accent);
   color: var(--accent-text);
 }
 
-.row[data-drop='true'] .icon,
-.row[data-drop='true'] .size,
-.row[data-drop='true'] .modified {
+.target[data-drop='true'] .icon,
+.target:global(.file-drop-target-active) .icon {
   color: inherit;
-}
-
-.name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 0 8px;
 }
 
 .nameText {

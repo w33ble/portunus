@@ -71,15 +71,16 @@ export function dropOnPane(id: PaneId, payload: DragPayload, dstDir: string): vo
   });
 }
 
-/** OS drop: dropped paths are always local. */
-export function dropFromOs(id: PaneId, paths: readonly string[]): void {
+/** OS drop: dropped paths are always local. `dir` is a folder in the pane (dropped on its name),
+ *  or empty for the pane's current directory. */
+export function dropFromOs(id: PaneId, paths: readonly string[], dir = ''): void {
   const dest = usePanes.getState().panes[id];
   if (dest.connId === null || paths.length === 0) return;
   void startCopy({
     srcConn: LOCAL_CONN,
     sources: [...paths],
     dstConn: dest.connId,
-    dstDir: dest.path,
+    dstDir: dir || dest.path,
   });
 }
 

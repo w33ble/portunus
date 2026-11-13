@@ -5,6 +5,7 @@ import * as api from './api';
 import { JobKind, State } from './api/enums';
 import type { JobView, Update } from './api/types';
 import App from './App';
+import { ENTRIES_MIME, encodeDragPayload } from './lib/dragData';
 import { usePanes } from './stores/panes';
 import { usePrompts } from './stores/prompts';
 import { useSettings } from './stores/settings';
@@ -146,13 +147,34 @@ afterEach(() => {
 const rowNames = (pane: 'left' | 'right') =>
   [...host.querySelectorAll(`[data-pane="${pane}"] [role=option]`)].map((r) => r.textContent ?? '');
 
+/** Dispatches an in-app drag of an S3 file onto el. happy-dom ignores DragEvent's dataTransfer init. */
+async function dropOn(el: Element | null | undefined) {
+  const dataTransfer = new DataTransfer();
+  dataTransfer.setData(
+    ENTRIES_MIME,
+    encodeDragPayload({ connId: 's3:p', paths: ['/bucket/a.txt'] })
+  );
+  await act(async () => {
+    for (const type of ['dragover', 'drop']) {
+      const event = new DragEvent(type, { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'dataTransfer', { value: dataTransfer });
+      el?.dispatchEvent(event);
+    }
+  });
+}
+
+const documentsRow = () =>
+  [...host.querySelectorAll<HTMLElement>('[data-pane="left"] [role=option]')].find((r) =>
+    r.textContent?.includes('Documents')
+  );
+
 describe('App', () => {
   it('opens both panes on the local home and hides dotfiles', () => {
     expect(rowNames('left')[0]).toContain('Documents');
     expect(rowNames('left').some((t) => t.includes('notes.txt'))).toBe(true);
     expect(rowNames('left').some((t) => t.includes('.hidden'))).toBe(false);
     expect(rowNames('right')).toHaveLength(2);
-    expect(host.querySelectorAll('[data-file-drop-target]')).toHaveLength(2);
+    expect(host.querySelectorAll('section[data-file-drop-target]')).toHaveLength(2);
   });
 
   it('opens the panes even when other startup calls never return', async () => {
@@ -264,6 +286,48 @@ describe('App', () => {
       sources: ['/home/notes.txt'],
       dstConn: 'local',
       dstDir: '/elsewhere',
+    });
+  });
+
+  describe('folder drop targets', () => {
+    beforeEach(() => vi.mocked(api.transfers.copy).mockResolvedValue('job'));
+
+    it('marks only folder names as drop targets', () => {
+      const targets = [
+        ...host.querySelectorAll('[data-pane="left"] [role=option] [data-file-drop-target]'),
+      ];
+      expect(targets.map((t) => t.getAttribute('data-path'))).toEqual(['/home/Documents']);
+      expect(targets[0]?.getAttribute('data-pane')).toBe('left');
+    });
+
+    it('copies into the folder when dropped on its name', async () => {
+      await dropOn(documentsRow()?.querySelector('[data-file-drop-target]'));
+      expect(api.transfers.copy).toHaveBeenCalledWith(
+        expect.objectContaining({ srcConn: 's3:p', dstDir: '/home/Documents' })
+      );
+    });
+
+    it('copies into the current directory when dropped elsewhere on a folder row', async () => {
+      await dropOn(documentsRow()?.lastElementChild);
+      expect(api.transfers.copy).toHaveBeenCalledWith(
+        expect.objectContaining({ srcConn: 's3:p', dstDir: '/home' })
+      );
+    });
+
+    it('sends Finder drops on a folder name into that folder', async () => {
+      emit('dropFiles', { paths: ['/Users/me/x.txt'], pane: 'right', dir: '/home/Documents' });
+      await flush();
+      expect(api.transfers.copy).toHaveBeenCalledWith(
+        expect.objectContaining({ srcConn: 'local', dstConn: 'local', dstDir: '/home/Documents' })
+      );
+    });
+
+    it('sends Finder drops without a folder into the pane directory', async () => {
+      emit('dropFiles', { paths: ['/Users/me/x.txt'], pane: 'right', dir: '' });
+      await flush();
+      expect(api.transfers.copy).toHaveBeenCalledWith(
+        expect.objectContaining({ srcConn: 'local', dstDir: '/home' })
+      );
     });
   });
 });

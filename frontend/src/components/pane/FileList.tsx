@@ -229,6 +229,7 @@ export function FileList({ paneId }: { paneId: PaneId }) {
             return (
               <FileRow
                 key={item.key}
+                paneId={paneId}
                 entry={entry}
                 index={item.index}
                 top={item.start - HEADER_HEIGHT}

@@ -1,10 +1,12 @@
 import { type DragEvent, type MouseEvent, memo } from 'react';
 import type { Entry } from '../../api/types';
 import { formatBytes, formatModified } from '../../lib/format';
+import type { PaneId } from '../../stores/paneTypes';
 import { Icon } from '../ui/Icon';
 import styles from './FileList.module.css';
 
 interface Props {
+  paneId: PaneId;
   entry: Entry;
   index: number;
   top: number;
@@ -26,6 +28,7 @@ function iconFor(entry: Entry) {
 }
 
 export const FileRow = memo(function FileRow({
+  paneId,
   entry,
   index,
   top,
@@ -40,6 +43,21 @@ export const FileRow = memo(function FileRow({
   onDragLeave,
   onDrop,
 }: Props) {
+  // Only a folder's icon and name accept drops; the rest of the row falls through to the list,
+  // which drops into the pane's current directory. The data-file-drop-target attributes let
+  // Wails report Finder drops onto the name with the folder's path.
+  const folderTarget = entry.isDir
+    ? {
+        'data-drop': dropTarget,
+        'data-file-drop-target': '',
+        'data-pane': paneId,
+        'data-path': entry.path,
+        onDragOver: (e: DragEvent) => onDragOver(entry, e),
+        onDragLeave: (e: DragEvent) => onDragLeave(entry, e),
+        onDrop: (e: DragEvent) => onDrop(entry, e),
+      }
+    : {};
+
   return (
     <div
       role="option"
@@ -48,7 +66,6 @@ export const FileRow = memo(function FileRow({
       className={styles.row}
       data-selected={selected}
       data-cursor={cursor}
-      data-drop={dropTarget}
       data-dir={entry.isDir}
       style={{ transform: `translateY(${top}px)` }}
       draggable
@@ -56,20 +73,19 @@ export const FileRow = memo(function FileRow({
       onDoubleClick={() => onOpen(entry)}
       onContextMenu={(e) => onContextMenu(entry, e)}
       onDragStart={(e) => onDragStart(entry, e)}
-      onDragOver={entry.isDir ? (e) => onDragOver(entry, e) : undefined}
-      onDragLeave={entry.isDir ? (e) => onDragLeave(entry, e) : undefined}
-      onDrop={entry.isDir ? (e) => onDrop(entry, e) : undefined}
     >
       <span
         className={styles.name}
         title={entry.link ? `${entry.name} → ${entry.link}` : entry.name}
       >
-        <Icon
-          name={iconFor(entry)}
-          className={styles.icon}
-          data-kind={entry.isDir ? 'dir' : 'file'}
-        />
-        <span className={styles.nameText}>{entry.name}</span>
+        <span className={styles.target} {...folderTarget}>
+          <Icon
+            name={iconFor(entry)}
+            className={styles.icon}
+            data-kind={entry.isDir ? 'dir' : 'file'}
+          />
+          <span className={styles.nameText}>{entry.name}</span>
+        </span>
       </span>
       <span className={styles.size}>{entry.isDir ? '—' : formatBytes(entry.size)}</span>
       <span className={styles.modified}>{formatModified(entry.modTime)}</span>
