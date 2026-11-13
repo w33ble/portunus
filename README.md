@@ -17,7 +17,7 @@ Status: MVP feature-complete on the `feat/mvp` branch and covered by an automate
 
 ## Requirements
 
-Tooling is pinned in `mise.toml` (Go, Node, pnpm, wails3 CLI, golangci-lint, zig):
+Tooling is pinned in `mise.toml` (Go, Node, pnpm, wails3 CLI, golangci-lint, gohawk):
 
 ```sh
 mise install
@@ -35,7 +35,8 @@ mise run dev          # app with hot reload (wails3 dev)
 mise run build        # production binary in bin/
 mise run package      # .app/.dmg on macOS, deb/rpm on Linux
 mise run check        # lint + typecheck + Go and frontend tests + format check
-mise run test:race    # Go tests under the race detector (zig cc supplies cgo)
+mise run test:race    # Go tests under the race detector (needs a C compiler; CI always runs it)
+mise run lint:gohawk  # gohawk static analysis: goroutine, lock, and resource-lifetime bugs
 mise run e2e          # end-to-end smoke (Linux, needs Docker and /usr/sbin/sshd)
 mise run fmt          # format Go and frontend
 mise run bindings     # regenerate frontend/bindings from Go services
@@ -51,10 +52,20 @@ Go lint and tests run with the `purego` build tag. That's Wails' CGO-free backen
 - Frontend tests use vitest (`pnpm --dir frontend test`).
 - `mise run e2e` builds the app in Wails server mode (`-tags server`), starts sshd and RustFS with throwaway fixtures, and drives the real UI with Playwright in Docker: connect, trust a host key, copy with conflicts, drag, delete, rename, and an S3 round trip. Screenshots land in `e2e/out/`.
 
+### CI
+
+GitHub Actions (`.github/workflows`):
+
+- `ci.yml` runs on every pull request and every push to `main`: `mise run check`, the race detector, gohawk, and native cgo builds on macOS and Ubuntu (GTK4/WebKitGTK 6).
+- `e2e.yml` runs the end-to-end suite on pushes to `main` and on manual dispatch. It's also callable via `workflow_call`, so a release workflow can require it. Screenshots are uploaded as an artifact.
+
+CI sets `PORTUNUS_REQUIRE_INTEGRATION=1`, which turns integration-test skips (missing sshd, ssh, or Docker) into failures.
+
 ### Environment
 
 - `PORTUNUS_SSH_CONFIG`: use this ssh config file instead of `~/.ssh/config`. It's passed to `ssh -G -F`, which also skips `/etc/ssh/ssh_config`.
 - `PORTUNUS_S3_IMAGE`: S3-compatible server image for the S3 tests and e2e (default `rustfs/rustfs:1.0.5`).
+- `PORTUNUS_REQUIRE_INTEGRATION`: when set, integration tests fail instead of skipping if sshd, ssh, or Docker is missing.
 
 App data lives in `~/Library/Application Support/Portunus` (macOS) or `~/.config/Portunus` (Linux): `settings.json`, `profiles.json`, and a fallback `known_hosts`.
 
