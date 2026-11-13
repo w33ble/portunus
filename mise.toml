@@ -67,3 +67,8 @@ run = "pnpm --dir frontend typecheck"
 description = "Everything CI should run"
 depends = ["lint", "typecheck", "test"]
 run = ["golangci-lint fmt --diff ./...", "pnpm --dir frontend fmt:check"]
+
+[tasks.e2e]
+description = "End-to-end smoke: real sshd + MinIO + server-mode build + Playwright in Docker (Linux)"
+depends = ["frontend:build"]
+run = "bash e2e/run.sh"
