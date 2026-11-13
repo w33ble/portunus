@@ -25,7 +25,8 @@
   gap: 2px;
   padding: 8px 10px;
   border-radius: var(--radius);
-  background: var(--bg-hover);
+  background: var(--bg-field);
+  box-shadow: var(--shadow-control);
   min-width: 0;
 }
 

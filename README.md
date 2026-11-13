@@ -58,6 +58,7 @@ Go lint and tests run with the `purego` build tag. That's Wails' CGO-free backen
 - Go unit and integration tests run against real servers. SFTP tests start an unprivileged OpenSSH `sshd`. S3 tests start RustFS (an S3-compatible server) in Docker and skip when Docker isn't available. A shared conformance suite (`internal/vfs/vfstest`) runs against every backend.
 - Frontend tests use vitest (`pnpm --dir frontend test`).
 - `mise run e2e` builds the app in Wails server mode (`-tags server`), starts sshd and RustFS with throwaway fixtures, and drives the real UI with Playwright in Docker: connect, trust a host key, copy with conflicts, drag, delete, rename, and an S3 round trip. Screenshots land in `e2e/out/`.
+- The same run opens every dialog in light and dark and checks contrast: axe-core's `color-contrast` rule for enabled text, plus a custom pass for what axe skips (disabled controls at least 3:1, placeholders 4.5:1, icon buttons 3:1). The measurements land in `e2e/out/contrast.json`. Run it alone with `E2E_FLOWS=contrast mise run e2e`; flows are the names in `e2e/flows/`.
 
 ### CI
 

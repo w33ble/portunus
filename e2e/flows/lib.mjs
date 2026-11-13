@@ -7,7 +7,9 @@ export const HOME = `${E2E_DIR}/home`;
 /** Runs a named flow with a fresh page, screenshots on failure, exit code 1 on error. */
 export async function flow(name, fn, { engine = 'chromium' } = {}) {
   const browser = await (engine === 'webkit' ? webkit : chromium).launch();
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  // axe-core needs a page from an explicit context, not browser.newPage().
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
 
