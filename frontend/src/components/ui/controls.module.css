@@ -100,7 +100,7 @@
 }
 
 .field::placeholder {
-  color: var(--text-disabled);
+  color: var(--text-secondary);
 }
 
 .field:focus-visible {
