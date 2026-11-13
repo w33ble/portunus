@@ -81,7 +81,8 @@ for _ in $(seq 1 50); do
 done
 
 echo "== server build"
-(cd "$ROOT" && go build -tags server -o "$E2E_DIR/portunus-server" .)
+# Server mode is pure Go; with cgo on (any box with a C compiler) Wails pulls in GTK/WebKit code.
+(cd "$ROOT" && CGO_ENABLED=0 go build -tags server -o "$E2E_DIR/portunus-server" .)
 HOME="$H" XDG_CONFIG_HOME="$E2E_DIR/config" PORTUNUS_SSH_CONFIG="$H/.ssh/config" \
   WAILS_SERVER_PORT="$APP_PORT" "$E2E_DIR/portunus-server" >"$E2E_DIR/server.log" 2>&1 &
 SERVER_PID=$!
