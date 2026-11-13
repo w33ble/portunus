@@ -103,9 +103,44 @@
     0 0 0 1px var(--accent);
 }
 
+/* Flat select: native chrome removed, our own chevron (see ui/Select.tsx). */
+.selectWrap {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+}
+
 .select {
   composes: field;
-  padding-right: 4px;
+  width: 100%;
+  min-width: 0;
+  padding-right: 22px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: default;
+  transition-property: background-color;
+  transition-duration: 120ms;
+  transition-timing-function: ease-out;
+}
+
+.select:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--bg-field), var(--text) 4%);
+}
+
+.select:disabled {
+  color: var(--text-disabled);
+}
+
+.selectIcon {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  translate: 0 -50%;
+  color: var(--text-secondary);
+  pointer-events: none;
 }
 
 .checkbox {

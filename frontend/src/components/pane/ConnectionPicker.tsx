@@ -4,7 +4,7 @@ import { useConnections } from '../../stores/connections';
 import type { PaneId } from '../../stores/paneTypes';
 import { usePanes } from '../../stores/panes';
 import { useUi } from '../../stores/ui';
-import controls from '../ui/controls.module.css';
+import { Select } from '../ui/Select';
 import styles from './PaneHeader.module.css';
 
 const QUICK = '__quick';
@@ -47,8 +47,8 @@ export function ConnectionPicker({ paneId }: { paneId: PaneId }) {
   };
 
   return (
-    <select
-      className={`${controls.select} ${styles.picker}`}
+    <Select
+      className={styles.picker}
       aria-label="Connection"
       value={currentKey}
       onChange={(e) => choose(e.target.value)}
@@ -82,6 +82,6 @@ export function ConnectionPicker({ paneId }: { paneId: PaneId }) {
         <option value={QUICK}>Quick connect…</option>
         <option value={MANAGE_S3}>Manage S3 profiles…</option>
       </optgroup>
-    </select>
+    </Select>
   );
 }
