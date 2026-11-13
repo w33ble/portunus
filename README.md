@@ -56,7 +56,7 @@ Go lint and tests run with the `purego` build tag. That's Wails' CGO-free backen
 
 GitHub Actions (`.github/workflows`):
 
-- `ci.yml` runs on every pull request and every push to `main`: `mise run check`, the race detector, gohawk, and native cgo builds on macOS and Ubuntu (GTK4/WebKitGTK 6).
+- `ci.yml` runs on every pull request and every push to `main`: `mise run check`, the race detector, gohawk, and a native cgo build on Ubuntu (GTK4/WebKitGTK 6). macOS builds aren't in CI; they're checked locally.
 - `e2e.yml` runs the end-to-end suite on pushes to `main` and on manual dispatch. It's also callable via `workflow_call`, so a release workflow can require it. Screenshots are uploaded as an artifact.
 
 CI sets `PORTUNUS_REQUIRE_INTEGRATION=1`, which turns integration-test skips (missing sshd, ssh, or Docker) into failures.
