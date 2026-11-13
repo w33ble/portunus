@@ -54,6 +54,12 @@ func (t *task) view() TaskView {
 	return TaskView{ID: t.id, Src: t.src, Dst: t.dst, Size: t.size, Done: t.done.Load(), State: t.state, Error: t.err}
 }
 
+// finishedTask is what a resumed job needs to count a settled path without redoing it.
+type finishedTask struct {
+	state State // StateDone or StateSkipped
+	size  int64
+}
+
 type job struct {
 	id                    string
 	kind                  JobKind
@@ -80,6 +86,7 @@ type job struct {
 	pending               int // tasks neither finished nor discarded
 	active                map[*task]struct{}
 	failed                []*task
+	finished              map[string]finishedTask // paths settled done or skipped, kept while the job is resumable
 	errMsg                string
 	applyAll              prompt.ConflictAction
 	taskSeq               int
@@ -278,6 +285,7 @@ func (e *Engine) settleLocked(j *job, t *task, s State, err error) {
 		j.doneBytes.Add(-t.done.Swap(0))
 	case StateQueued, StateRunning, StateWaiting:
 	}
+	j.recordFinishedLocked(t, s)
 	e.touch(j)
 	e.depDoneLocked(j, t)
 	e.finishCheckLocked(j)
@@ -288,6 +296,27 @@ func (e *Engine) settle(j *job, t *task, s State, err error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.settleLocked(j, t, s, err)
+}
+
+// recordFinishedLocked remembers files (and, for deletes, directories) that are done or
+// skipped, so Resume can count them without walking them again.
+func (j *job) recordFinishedLocked(t *task, s State) {
+	if s != StateDone && s != StateSkipped {
+		return
+	}
+	key := t.dst
+	if j.kind == KindDelete {
+		key = t.src
+	} else if t.kind != taskFile {
+		return
+	}
+	if key == "" {
+		return
+	}
+	if j.finished == nil {
+		j.finished = map[string]finishedTask{}
+	}
+	j.finished[key] = finishedTask{state: s, size: t.size}
 }
 
 // depDoneLocked tells a delete job's parent directory that a child is finished.
@@ -342,6 +371,9 @@ func (e *Engine) finalizeLocked(j *job, s State) {
 	}
 	clear(j.active)
 	j.walking = false
+	if s != StateCanceled {
+		j.finished = nil
+	}
 	j.finishedAt = time.Now()
 	j.meter = meter{}
 	e.setStateLocked(j, s)
