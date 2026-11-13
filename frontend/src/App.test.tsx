@@ -155,6 +155,23 @@ describe('App', () => {
     expect(host.querySelectorAll('[data-file-drop-target]')).toHaveLength(2);
   });
 
+  it('opens the panes even when other startup calls never return', async () => {
+    act(() => root.unmount());
+    usePanes.setState(usePanes.getInitialState(), true);
+    const never = new Promise<never>(() => {});
+    vi.mocked(api.settings.get).mockReturnValue(never);
+    vi.mocked(api.connections.sshHosts).mockReturnValue(never);
+    vi.mocked(api.transfers.jobs).mockReturnValue(never);
+    vi.mocked(api.prompts.pending).mockReturnValue(never);
+
+    root = createRoot(host);
+    await act(async () => root.render(<App />));
+    await flush();
+
+    expect(rowNames('left').some((t) => t.includes('notes.txt'))).toBe(true);
+    expect(rowNames('right').some((t) => t.includes('notes.txt'))).toBe(true);
+  });
+
   it('shows a Transfers badge and the status bar for active jobs', async () => {
     const job: JobView = {
       id: 'j1',

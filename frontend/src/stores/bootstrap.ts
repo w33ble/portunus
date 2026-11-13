@@ -26,12 +26,13 @@ export function startBackend(): () => void {
   ];
 
   // Listeners are live first, so nothing emitted during the initial fetches is lost.
-  void Promise.all([
-    useSettings.getState().load(),
-    useConnections.getState().load(),
-    useTransfers.getState().init(),
-    usePrompts.getState().init(),
-  ]).then(() => usePanes.getState().init());
+  // Panes open independently: a slow or hung call (e.g. reading ~/.ssh/config) must not
+  // leave them blank.
+  usePanes.getState().init();
+  void useSettings.getState().load();
+  void useConnections.getState().load();
+  void useTransfers.getState().init();
+  void usePrompts.getState().init();
 
   return () => {
     for (const unsubscribe of off) unsubscribe();
