@@ -2,7 +2,7 @@
 export type {
   Connection,
   DropFiles,
-  FilePage,
+  ListPage,
   Target,
 } from '../../bindings/github.com/w33ble/portunus/internal/services';
 export type {

@@ -1,4 +1,3 @@
-import type { CancellablePromise } from '@wailsio/runtime';
 import {
   ConnectionService,
   FileService,
@@ -9,6 +8,7 @@ import {
 import type { ConflictAnswer } from '../../bindings/github.com/w33ble/portunus/internal/prompt';
 import { Policy, TargetKind } from './enums';
 import { toAppError } from './errors';
+import { type ListBackend, type Listing, pullListing } from './listing';
 import type {
   Connection,
   Entry,
@@ -29,22 +29,18 @@ function call<T>(promise: PromiseLike<T>): Promise<T> {
   });
 }
 
-export interface Listing {
-  /** Resolves with the total entry count once List returns. */
-  total: Promise<number>;
-  cancel(): void;
-}
+export type { Listing } from './listing';
+
+const listBackend: ListBackend = {
+  start: (connId, dir) => FileService.List(connId, dir),
+  next: (cursor) => FileService.ListNext(cursor),
+  close: (cursor) => FileService.ListClose(cursor),
+};
 
 export const files = {
-  list(connId: string, dir: string, requestId: string): Listing {
-    const promise: CancellablePromise<number> = FileService.List(connId, dir, requestId);
-    return {
-      total: call(promise),
-      cancel: () => {
-        void promise.cancel();
-      },
-    };
-  },
+  /** Pulls the listing page by page, calling onPage with each as it arrives. */
+  list: (connId: string, dir: string, onPage: (entries: readonly Entry[]) => void): Listing =>
+    pullListing(listBackend, connId, dir, onPage),
   mkdir: (connId: string, dir: string, name: string): Promise<Entry> =>
     call(FileService.Mkdir(connId, dir, name)),
   rename: (connId: string, path: string, newName: string): Promise<Entry> =>

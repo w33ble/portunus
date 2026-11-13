@@ -28,7 +28,6 @@ const { handlers, on } = vi.hoisted(() => {
 
 vi.mock('./api/events', () => ({
   events: {
-    filesPage: on('filesPage'),
     transfersUpdate: on('transfersUpdate'),
     connectionsChanged: on('connectionsChanged'),
     dropFiles: on('dropFiles'),
@@ -122,14 +121,9 @@ beforeEach(async () => {
   vi.mocked(api.connections.connect).mockResolvedValue(localConnection());
   vi.mocked(api.transfers.jobs).mockResolvedValue([]);
   vi.mocked(api.prompts.pending).mockResolvedValue({ hostKeys: [], secrets: [], conflicts: [] });
-  vi.mocked(api.files.list).mockImplementation((_conn, _dir, requestId) => {
-    queueMicrotask(() =>
-      handlers.get('filesPage')?.({
-        requestId,
-        entries: [entry('Documents', true), entry('notes.txt'), entry('.hidden')],
-      } as never)
-    );
-    return { total: Promise.resolve(3), cancel: vi.fn() };
+  vi.mocked(api.files.list).mockImplementation((_conn, _dir, onPage) => {
+    onPage([entry('Documents', true), entry('notes.txt'), entry('.hidden')]);
+    return { done: Promise.resolve(), cancel: vi.fn() };
   });
 
   host = document.createElement('div');

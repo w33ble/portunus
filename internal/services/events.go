@@ -5,21 +5,13 @@ import (
 
 	"github.com/w33ble/portunus/internal/prompt"
 	"github.com/w33ble/portunus/internal/transfer"
-	"github.com/w33ble/portunus/internal/vfs"
 )
 
 const (
-	EventFilesPage   = "files:page"
 	EventTransfers   = "transfers:update"
 	EventConnections = "connections:changed"
 	EventDrop        = "drop:files"
 )
-
-// FilePage is one batch of a streaming FileService.List call.
-type FilePage struct {
-	RequestID string      `json:"requestId"`
-	Entries   []vfs.Entry `json:"entries"`
-}
 
 // DropFiles reports files dropped from the OS onto a pane.
 type DropFiles struct {
@@ -30,7 +22,6 @@ type DropFiles struct {
 
 // Registration gives the frontend generated types for each event payload.
 func init() {
-	application.RegisterEvent[FilePage](EventFilesPage)
 	application.RegisterEvent[transfer.Update](EventTransfers)
 	application.RegisterEvent[[]Connection](EventConnections)
 	application.RegisterEvent[DropFiles](EventDrop)

@@ -52,6 +52,7 @@ type App struct {
 	sshConfig string // explicit config file (PORTUNUS_SSH_CONFIG); "" means ssh's defaults
 	dialer    atomic.Pointer[sshconn.Dialer]
 	reg       *registry
+	lists     *listings
 	engine    *transfer.Engine
 }
 
@@ -82,6 +83,7 @@ func New(cfg Config) (*App, error) {
 	a.resolver = sshcfg.Resolver{SSHPath: sshPath, ConfigPath: a.sshConfig}
 	a.applySettings(a.settings.Get())
 
+	a.lists = newListings(listIdleTimeout)
 	a.reg = newRegistry(localfs.New(), a.dial, func(conns []Connection) {
 		a.emit(EventConnections, conns)
 	})
@@ -113,9 +115,10 @@ func (a *App) Services() []application.Service {
 	}
 }
 
-// Close cancels transfers, fails pending prompts, and closes every connection.
+// Close cancels listings and transfers, fails pending prompts, and closes every connection.
 func (a *App) Close() {
 	a.broker.Close()
+	a.lists.closeAll()
 	a.engine.Close()
 	a.reg.CloseAll()
 }

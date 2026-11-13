@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as api from '../api';
 import { shownEntries } from '../lib/listing';
 import { useConnections } from './connections';
-import { receivePage, usePanes } from './panes';
+import { usePanes } from './panes';
 import { bindingError, deferred, entry, localConnection } from './testApi';
 import { useUi } from './ui';
 
@@ -12,19 +12,20 @@ const listMock = vi.mocked(api.files.list);
 const connectMock = vi.mocked(api.connections.connect);
 
 interface FakeList {
-  requestId: string;
-  total: ReturnType<typeof deferred<number>>;
+  /** Delivers a page the way the pull loop does. */
+  page: (...entries: ReturnType<typeof entry>[]) => void;
+  done: ReturnType<typeof deferred<void>>;
   cancel: ReturnType<typeof vi.fn>;
 }
 
-/** Each List call gets a controllable handle so tests decide when the total resolves. */
+/** Each list call gets a controllable handle so tests decide when pages arrive and it ends. */
 function captureLists(): FakeList[] {
   const lists: FakeList[] = [];
-  listMock.mockImplementation((_conn, _dir, requestId) => {
-    const total = deferred<number>();
+  listMock.mockImplementation((_conn, _dir, onPage) => {
+    const done = deferred<void>();
     const cancel = vi.fn();
-    lists.push({ requestId, total, cancel });
-    return { total: total.promise, cancel };
+    lists.push({ page: (...entries) => onPage(entries), done, cancel });
+    return { done: done.promise, cancel };
   });
   return lists;
 }
@@ -103,52 +104,40 @@ describe('connecting', () => {
   });
 });
 
-describe('streaming listings', () => {
-  it('becomes ready when pages arrive before the total', async () => {
+describe('pulled listings', () => {
+  it('renders pages as they arrive and becomes ready when the listing ends', async () => {
     const lists = captureLists();
     await openLocal();
     const [list] = lists;
-    receivePage(list!.requestId, [entry('a'), entry('b')]);
+    list!.page(entry('a'), entry('b'));
     vi.advanceTimersByTime(100);
     expect(names()).toEqual(['a', 'b']);
     expect(left().status.kind).toBe('loading');
 
-    list!.total.resolve(2);
-    await vi.advanceTimersByTimeAsync(0);
-    expect(left().status.kind).toBe('ready');
-  });
-
-  it('becomes ready when the total resolves before the last page', async () => {
-    const lists = captureLists();
-    await openLocal();
-    const [list] = lists;
-    receivePage(list!.requestId, [entry('a')]);
+    list!.page(entry('c'));
     vi.advanceTimersByTime(100);
-
-    list!.total.resolve(3);
-    await vi.advanceTimersByTimeAsync(0);
+    expect(names()).toEqual(['a', 'b', 'c']);
     expect(left().status.kind).toBe('loading');
 
-    receivePage(list!.requestId, [entry('b'), entry('c')]);
-    vi.advanceTimersByTime(100);
-    expect(left().status.kind).toBe('ready');
-    expect(names()).toEqual(['a', 'b', 'c']);
-  });
-
-  it('flushes buffered pages when the total arrives', async () => {
-    const lists = captureLists();
-    await openLocal();
-    const [list] = lists;
-    receivePage(list!.requestId, [entry('a')]);
-    list!.total.resolve(1);
+    list!.done.resolve();
     await vi.advanceTimersByTimeAsync(0);
     expect(left().status.kind).toBe('ready');
+  });
+
+  it('flushes buffered pages when the listing ends', async () => {
+    const lists = captureLists();
+    await openLocal();
+    lists[0]!.page(entry('a'));
+    lists[0]!.done.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(left().status.kind).toBe('ready');
+    expect(names()).toEqual(['a']);
   });
 
   it('treats an empty directory as ready', async () => {
     const lists = captureLists();
     await openLocal();
-    lists[0]!.total.resolve(0);
+    lists[0]!.done.resolve();
     await vi.advanceTimersByTimeAsync(0);
     expect(left().status.kind).toBe('ready');
     expect(names()).toEqual([]);
@@ -161,43 +150,70 @@ describe('streaming listings', () => {
     expect(lists[0]!.cancel).toHaveBeenCalled();
     expect(left().path).toBe('/home/docs');
 
-    receivePage(lists[0]!.requestId, [entry('stale')]);
-    receivePage(lists[1]!.requestId, [entry('fresh', false, '/home/docs')]);
+    lists[0]!.page(entry('stale'));
+    lists[1]!.page(entry('fresh', false, '/home/docs'));
     vi.advanceTimersByTime(100);
     expect(names()).toEqual(['fresh']);
+  });
+
+  it('ignores the end of a superseded listing', async () => {
+    const lists = captureLists();
+    await openLocal();
+    usePanes.getState().navigate('left', '/home/docs');
+    lists[0]!.done.resolve();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(left().status.kind).toBe('loading');
   });
 
   it('keeps the old entries on screen while a refresh streams in', async () => {
     const lists = captureLists();
     await openLocal();
-    receivePage(lists[0]!.requestId, [entry('old')]);
+    lists[0]!.page(entry('old'));
     vi.advanceTimersByTime(100);
-    lists[0]!.total.resolve(1);
+    lists[0]!.done.resolve();
     await vi.advanceTimersByTimeAsync(0);
 
     usePanes.getState().refresh('left');
     expect(names()).toEqual(['old']);
-    receivePage(lists[1]!.requestId, [entry('new')]);
+    lists[1]!.page(entry('new'));
     vi.advanceTimersByTime(100);
     expect(names()).toEqual(['old']);
-    lists[1]!.total.resolve(1);
+    lists[1]!.done.resolve();
     await vi.advanceTimersByTimeAsync(0);
     expect(names()).toEqual(['new']);
   });
 
-  it('goes to the error state when List fails, and ignores cancellation', async () => {
+  it('shows the error banner when the listing fails, and ignores cancellation', async () => {
     const lists = captureLists();
     await openLocal();
-    lists[0]!.total.reject(bindingError('permission', 'open /root: permission denied'));
+    lists[0]!.done.reject(bindingError('permission', 'open /root: permission denied'));
     await vi.advanceTimersByTimeAsync(0);
     expect(left().status).toMatchObject({ kind: 'error', error: { kind: 'permission' } });
 
     usePanes.getState().refresh('left');
     const cancelled = new Error('Promise cancelled.');
     cancelled.name = 'CancelError';
-    lists[1]!.total.reject(cancelled);
+    lists[1]!.done.reject(cancelled);
     await vi.advanceTimersByTimeAsync(0);
     expect(left().status.kind).toBe('loading');
+  });
+
+  it('keeps the pages received before a mid-stream failure', async () => {
+    const lists = captureLists();
+    await openLocal();
+    lists[0]!.page(entry('a'));
+    lists[0]!.done.reject(bindingError('other', 'connection reset'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(left().status).toMatchObject({ kind: 'error', error: { message: 'connection reset' } });
+    expect(names()).toEqual(['a']);
+  });
+
+  it('surfaces not_connected so the pane can offer a reconnect', async () => {
+    const lists = captureLists();
+    await openLocal();
+    lists[0]!.done.reject(bindingError('not_connected', 'ssh:h: not connected'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(left().status).toMatchObject({ kind: 'error', error: { kind: 'not_connected' } });
   });
 });
 

@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Entry } from '../api/types';
 import {
   applyPage,
-  applyTotal,
   createPageBatcher,
-  isComplete,
+  failListing,
+  finishListing,
   shownEntries,
   startListing,
 } from './listing';
@@ -19,34 +19,25 @@ const e = (name: string): Entry => ({
 });
 
 describe('listing accumulation', () => {
-  it('completes when pages arrive before the total', () => {
+  it('collects pages and completes only when finished', () => {
     let l = startListing('r1', null);
     l = applyPage(l, 'r1', [e('a'), e('b')]);
-    expect(isComplete(l)).toBe(false);
     l = applyPage(l, 'r1', [e('c')]);
-    expect(isComplete(l)).toBe(false);
-    l = applyTotal(l, 'r1', 3);
-    expect(isComplete(l)).toBe(true);
-    expect(l.entries).toHaveLength(3);
+    expect(l.done).toBe(false);
+    expect(l.entries.map((x) => x.name)).toEqual(['a', 'b', 'c']);
+    l = finishListing(l, 'r1');
+    expect(l.done).toBe(true);
   });
 
-  it('completes when the total arrives before the last page', () => {
-    let l = startListing('r1', null);
-    l = applyPage(l, 'r1', [e('a')]);
-    l = applyTotal(l, 'r1', 3);
-    expect(isComplete(l)).toBe(false);
-    l = applyPage(l, 'r1', [e('b'), e('c')]);
-    expect(isComplete(l)).toBe(true);
+  it('an empty directory is complete as soon as it finishes', () => {
+    expect(finishListing(startListing('r1', null), 'r1').done).toBe(true);
   });
 
-  it('an empty directory is complete as soon as the total is 0', () => {
-    expect(isComplete(applyTotal(startListing('r1', null), 'r1', 0))).toBe(true);
-  });
-
-  it('ignores pages and totals from superseded requests', () => {
+  it('ignores pages and completion from superseded requests', () => {
     const l = startListing('r2', null);
     expect(applyPage(l, 'r1', [e('stale')])).toBe(l);
-    expect(applyTotal(l, 'r1', 1)).toBe(l);
+    expect(finishListing(l, 'r1')).toBe(l);
+    expect(failListing(l, 'r1')).toBe(l);
   });
 
   it('keeps old entries visible until a refresh completes', () => {
@@ -54,8 +45,22 @@ describe('listing accumulation', () => {
     let l = startListing('r2', old);
     l = applyPage(l, 'r2', [e('new')]);
     expect(shownEntries(l)).toBe(old);
-    l = applyTotal(l, 'r2', 1);
+    l = finishListing(l, 'r2');
     expect(shownEntries(l).map((x) => x.name)).toEqual(['new']);
+  });
+
+  it('a failed listing keeps the partial entries it received', () => {
+    let l = applyPage(startListing('r1', null), 'r1', [e('a')]);
+    l = failListing(l, 'r1');
+    expect(l.done).toBe(true);
+    expect(shownEntries(l).map((x) => x.name)).toEqual(['a']);
+  });
+
+  it('a failed refresh keeps showing the old entries', () => {
+    const old = [e('old')];
+    const l = failListing(applyPage(startListing('r2', old), 'r2', [e('new')]), 'r2');
+    expect(l.done).toBe(false);
+    expect(shownEntries(l)).toBe(old);
   });
 });
 

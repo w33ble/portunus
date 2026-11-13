@@ -65,6 +65,7 @@ type FS interface {
 
 	// List calls page with batches of the directory's entries, in backend order.
 	// Returning an error from page stops listing and List returns that error.
+	// Each batch is a fresh slice the receiver may keep.
 	List(ctx context.Context, dir string, page func([]Entry) error) error
 
 	Stat(ctx context.Context, p string) (Entry, error)

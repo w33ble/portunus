@@ -3,7 +3,7 @@ import { conflictPrompt, hostKeyPrompt, secretPrompt } from '../lib/prompts';
 import { dropFromOs } from './fileOps';
 import { useConnections } from './connections';
 import { parsePaneId } from './paneTypes';
-import { receivePage, usePanes } from './panes';
+import { usePanes } from './panes';
 import { usePrompts } from './prompts';
 import { useSettings } from './settings';
 import { useTransfers } from './transfers';
@@ -12,7 +12,6 @@ import { useUi } from './ui';
 /** Subscribes to backend events, loads initial state, and opens the panes. Returns the cleanup. */
 export function startBackend(): () => void {
   const off = [
-    events.filesPage((page) => receivePage(page.requestId, page.entries ?? [])),
     events.transfersUpdate((update) => useTransfers.getState().apply(update)),
     events.connectionsChanged((list) => useConnections.getState().setConnections(list)),
     events.dropFiles((drop) => {
