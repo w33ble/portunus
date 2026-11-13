@@ -1,0 +1,100 @@
+version: "2"
+
+run:
+  timeout: 5m
+  # Wails needs cgo (GTK/WebKit headers on Linux) or the CGO-free `purego` backend to typecheck.
+  # purego lets lint run anywhere, including CI runners without GUI dev packages.
+  build-tags:
+    - purego
+
+linters:
+  enable:
+    # Core
+    - govet
+    - staticcheck
+    - revive
+
+    # Security
+    - gosec        # Insecure patterns in your code
+    # - govulncheck  # CVEs in dependencies
+
+    # High-value additions
+    - errcheck
+    - ineffassign
+    - misspell
+    - bodyclose    # HTTP resources
+    - modernize    # Suggest modern Go patterns
+    - gocyclo      # Cyclomatic complexity check (optional)
+    # - forbidigo    # Forbids specific patterns or identifiers (optional)
+
+    # Project-specific: network/IO-heavy code with state enums
+    - errorlint    # errors.Is/As over == and type switches; wrapped SFTP/S3 errors
+    - nilerr       # Returning nil after checking err != nil
+    - noctx        # Network calls without context.Context (cancellable transfers)
+    - exhaustive   # Switches over transfer state / backend kind enums
+    - unconvert    # Redundant conversions (int64/uint32 size and mode juggling)
+    - sloglint     # Consistent log/slog usage
+
+  disable:
+    # Avoid noise for most projects
+    - funlen       # Function length (subjective)
+    - gocognit     # Complexity (optional)
+    - whitespace   # gofmt handles this
+
+  settings:
+    govet:
+      disable:
+        - inline  # perf hints for library hot paths; noisy in app code
+
+    revive:
+      rules:
+        - name: unused-parameter
+          disabled: true
+
+    gosec:
+      excludes:
+        - G204  # Subprocess auditing (enable if needed)
+        - G704  # SSRF taint: URL is CLI input by design
+        - G706  # Log injection taint: debug logs echo CLI input by design
+        - G304  # File inclusion via variable: user-chosen local paths are the product
+
+    gocyclo:
+      min-complexity: 15  # 30 default, 10-20 recommended in docs
+
+    exhaustive:
+      default-signifies-exhaustive: true
+
+    sloglint:
+      kv-only: true
+      context: scope
+
+    # forbidigo:
+    #   forbid:
+    #     - pattern: '^fmt\.Print'
+    #       msg: "Don't commit print statements"
+    #     - pattern: '^panic$'
+    #       msg: "Use proper error returns"
+    #   analyze_types: true
+
+  exclusions:
+    paths:
+      - frontend
+      - build
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/w33ble/portunus
+
+output:
+  formats:
+    text:
+      path: stdout
+      print-issued-lines: false
+      print-linter-name: true
+

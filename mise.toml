@@ -1,0 +1,61 @@
+[tools]
+age = "latest"
+fnox = { version = "latest", workflow = "release.yml" }
+go = "1.27"
+"go:github.com/wailsapp/wails/v3/cmd/wails3" = "v3.1.0"
+golangci-lint = "2.15"
+node = "24"
+pnpm = "12"
+
+# Wails needs cgo or the CGO-free `purego` backend; purego keeps Go checks runnable without GTK/WebKit headers.
+[tasks.dev]
+description = "Run the app with hot reload"
+run = "wails3 dev"
+
+[tasks.build]
+description = "Build a production binary for the host OS"
+run = "wails3 build"
+
+[tasks.package]
+description = "Package for the host OS (.app/.dmg on macOS, AppImage/deb/rpm on Linux)"
+run = "wails3 package"
+
+[tasks.bindings]
+description = "Regenerate TypeScript bindings from Go services"
+run = "wails3 generate bindings -f '-tags purego' -clean=true -ts -i"
+
+[tasks."frontend:install"]
+dir = "frontend"
+run = "pnpm install --frozen-lockfile"
+sources = ["package.json", "pnpm-lock.yaml"]
+outputs = ["node_modules/.pnpm/lock.yaml"]
+
+[tasks."frontend:build"]
+description = "Build frontend/dist (embedded by main.go; required before compiling Go)"
+depends = ["frontend:install", "bindings"]
+run = "pnpm --dir frontend build"
+
+[tasks.test]
+description = "Run Go tests"
+depends = ["frontend:build"]
+run = "go test -tags purego ./..."
+
+[tasks.lint]
+description = "Lint Go and frontend"
+depends = ["frontend:install"]
+run = ["golangci-lint run ./...", "pnpm --dir frontend lint"]
+
+[tasks.fmt]
+description = "Format Go and frontend"
+depends = ["frontend:install"]
+run = ["golangci-lint fmt ./...", "pnpm --dir frontend fmt"]
+
+[tasks.typecheck]
+description = "Typecheck the frontend"
+depends = ["frontend:install", "bindings"]
+run = "pnpm --dir frontend typecheck"
+
+[tasks.check]
+description = "Everything CI should run"
+depends = ["lint", "typecheck", "test"]
+run = ["golangci-lint fmt --diff ./...", "pnpm --dir frontend fmt:check"]

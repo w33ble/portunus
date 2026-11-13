@@ -1,0 +1,28 @@
+.app {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+}
+
+.titlebar {
+  --wails-draggable: drag;
+  padding: 10px 80px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.panes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+}
+
+.pane {
+  min-height: 0;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+}
+
+.pane + .pane {
+  border-left: 1px solid var(--border);
+}

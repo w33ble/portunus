@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MsixPackagingToolTemplate
+    xmlns="http://schemas.microsoft.com/msix/packaging/msixpackagingtool/template/2022">
+    <Settings
+        AllowTelemetry="false"
+        ApplyACLsToPackageFiles="true"
+        GenerateCommandLineFile="true"
+        AllowPromptForPassword="false">
+    </Settings>
+    <Installer
+        Path="portunus"
+        Arguments=""
+        InstallLocation="C:\Program Files\Joe Fleming\Portunus">
+    </Installer>
+    <PackageInformation
+        PackageName="Portunus"
+        PackageDisplayName="Portunus"
+        PublisherName="CN=Joe Fleming"
+        PublisherDisplayName="Joe Fleming"
+        Version="0.1.0.0"
+        PackageDescription="SFTP and S3 file transfer client">
+        <Capabilities>
+            <Capability Name="runFullTrust" />
+            
+        </Capabilities>
+        <Applications>
+            <Application
+                Id="com.w33ble.portunus"
+                Description="SFTP and S3 file transfer client"
+                DisplayName="Portunus"
+                ExecutableName="portunus"
+                EntryPoint="Windows.FullTrustApplication">
+                
+            </Application>
+        </Applications>
+        <Resources>
+            <Resource Language="en-us" />
+        </Resources>
+        <Dependencies>
+            <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+        </Dependencies>
+        <Properties>
+            <Framework>false</Framework>
+            <DisplayName>Portunus</DisplayName>
+            <PublisherDisplayName>Joe Fleming</PublisherDisplayName>
+            <Description>SFTP and S3 file transfer client</Description>
+            <Logo>Assets\AppIcon.png</Logo>
+        </Properties>
+    </PackageInformation>
+    <SaveLocation PackagePath="portunus.msix" />
+    <PackageIntegrity>
+        <CertificatePath></CertificatePath>
+    </PackageIntegrity>
+</MsixPackagingToolTemplate>
