@@ -27,6 +27,10 @@ function focusPane(id: PaneId): void {
     ?.focus({ preventScroll: true });
 }
 
+function focusPreview(): void {
+  document.querySelector<HTMLElement>('[data-preview-body]')?.focus({ preventScroll: true });
+}
+
 /** Keyboard handling for a focused file list. Pane-wide shortcuts (⌘L, ⌘R, ⌘F) live in Pane. */
 export function useFileListKeys(args: Args) {
   const { paneId, visible, selection, pageRows, filtering, typeAhead } = args;
@@ -35,6 +39,7 @@ export function useFileListKeys(args: Args) {
   const cursorEntry = visible.find((e) => e.path === selection.cursor);
 
   return (event: KeyboardEvent) => {
+    const previewing = useUi.getState().preview === paneId;
     const mod = event.metaKey || event.ctrlKey;
     const move = (delta: number) => {
       event.preventDefault();
@@ -45,8 +50,12 @@ export function useFileListKeys(args: Args) {
     const typeToFind = () => {
       if (mod || event.nativeEvent.isComposing || [...event.key].length !== 1) return;
       const next = typeKey(typeAhead.current, event.key, Date.now());
-      // A lone space keeps its default (scroll); "/" or "~" first starts a path instead.
-      if (next.text === ' ') return;
+      // A lone space toggles the preview; after typed letters it's part of the name.
+      if (next.text === ' ') {
+        event.preventDefault();
+        useUi.getState().togglePreview(paneId);
+        return;
+      }
       event.preventDefault();
       if (next.text === '/' || next.text === '~') {
         typeAhead.current = EMPTY_TYPE_AHEAD;
@@ -116,7 +125,8 @@ export function useFileListKeys(args: Args) {
         copyToOtherPane(paneId);
         break;
       case 'Escape':
-        if (filtering) panes.closeFilter(paneId);
+        if (previewing) useUi.getState().closePreview();
+        else if (filtering) panes.closeFilter(paneId);
         else
           panes.setSelection(paneId, {
             selected: new Set(),
@@ -126,7 +136,9 @@ export function useFileListKeys(args: Args) {
         break;
       case 'Tab':
         event.preventDefault();
-        focusPane(otherPane(paneId));
+        // The preview stands in for the other pane, so Tab goes to it instead.
+        if (previewing) focusPreview();
+        else focusPane(otherPane(paneId));
         break;
       case 'a':
       case 'A':

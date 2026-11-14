@@ -11,7 +11,8 @@ import { PaneHeader } from './PaneHeader';
 import styles from './Pane.module.css';
 import type { PathBarHandle } from './PathBar';
 
-export function Pane({ paneId }: { paneId: PaneId }) {
+/** `hidden` keeps the pane mounted (scroll, listing) while the other pane's preview stands in. */
+export function Pane({ paneId, hidden = false }: { paneId: PaneId; hidden?: boolean }) {
   const active = useUi((s) => s.activePane === paneId);
   const setActivePane = useUi((s) => s.setActivePane);
   const pathBar = useRef<PathBarHandle>(null);
@@ -51,6 +52,7 @@ export function Pane({ paneId }: { paneId: PaneId }) {
       aria-label={paneId === 'left' ? 'Left pane' : 'Right pane'}
       data-pane={paneId}
       data-pane-active={active}
+      hidden={hidden}
       data-file-drop-target
       onFocusCapture={() => setActivePane(paneId)}
       onMouseDownCapture={() => setActivePane(paneId)}

@@ -1,6 +1,7 @@
 // Types come straight from the generated bindings; nothing here is hand-duplicated.
 export type {
   Connection,
+  DirSummary,
   DropFiles,
   ListPage,
   Target,

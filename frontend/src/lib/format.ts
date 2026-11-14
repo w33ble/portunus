@@ -65,3 +65,12 @@ export function formatDateTime(iso: string, opts: Omit<DateFormatOptions, 'now'>
     timeStyle: 'short',
   }).format(date);
 }
+
+/** `ls -l` style permissions ("drwxr-xr-x") from a Go fs.FileMode; "—" where the backend has none (S3). */
+export function formatMode(mode: number, isDir: boolean, isLink: boolean): string {
+  const perm = mode & 0o777;
+  if (perm === 0) return '—';
+  const type = isLink ? 'l' : isDir ? 'd' : '-';
+  const bits = [...'rwxrwxrwx'].map((c, i) => (perm & (1 << (8 - i)) ? c : '-'));
+  return type + bits.join('');
+}
