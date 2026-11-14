@@ -25,6 +25,19 @@ export async function flow(name, fn, { engine = 'chromium' } = {}) {
       if (settle) await page.waitForTimeout(400); // let dialog transitions settle
       await page.screenshot({ path: `/out/${name}-${String(++shotN).padStart(2, '0')}-${label}.png` });
     },
+    /** Drags `source` onto `target` and moves instead of copying. Shift pressed at mousedown would
+     *  extend the selection and never start a drag, so, like a user changing their mind mid-drag,
+     *  press it once the pointer is over the target. */
+    shiftDrag: async (source, target) => {
+      await source.hover();
+      await page.mouse.down();
+      await target.hover();
+      await page.keyboard.down('Shift');
+      const box = await target.boundingBox();
+      await page.mouse.move(box.x + box.width / 2 + 2, box.y + box.height / 2);
+      await page.mouse.up();
+      await page.keyboard.up('Shift');
+    },
     goTo: async (pane, p) => {
       await pane.getByLabel('Edit path').click();
       const input = pane.locator('input[aria-label="Path"]');

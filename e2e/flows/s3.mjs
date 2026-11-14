@@ -1,7 +1,8 @@
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { flow, assert, sameFile, previewFixtures, HOME } from './lib.mjs';
 
 await flow('s3', async (ctx) => {
-  const { page, left, right, row, step, shot, goTo } = ctx;
+  const { page, left, right, row, step, shot, goTo, shiftDrag } = ctx;
   await goTo(left, `${HOME}/Documents`);
   await row(left, 'random.bin').waitFor();
 
@@ -59,4 +60,39 @@ await flow('s3', async (ctx) => {
   await row(right, '2026').waitFor({ timeout: 15000 });
   await row(right, 'empty').waitFor({ timeout: 15000 });
   await shot('s3-browse');
+
+  step('move between local and S3');
+  const dl = `${HOME}/Documents/download`;
+  writeFileSync(`${dl}/mv-s3.txt`, 's3 moved\n');
+  mkdirSync(`${dl}/mv-s3-dir/sub`, { recursive: true });
+  writeFileSync(`${dl}/mv-s3-dir/sub/inner.txt`, 'inner\n');
+  await left.getByLabel('Refresh').click();
+  await right.getByLabel('Up one level').click();
+  await row(right, 'random.bin').waitFor({ timeout: 15000 });
+  await row(left, 'mv-s3.txt').click();
+  await row(left, 'mv-s3-dir').click({ modifiers: ['Control'] });
+  await page.keyboard.press('F6');
+  await row(right, 'mv-s3-dir').waitFor({ timeout: 20000 });
+  await row(right, 'mv-s3.txt').waitFor({ timeout: 20000 });
+  await row(left, 'mv-s3-dir').waitFor({ state: 'detached', timeout: 15000 });
+  await row(left, 'mv-s3.txt').waitFor({ state: 'detached', timeout: 15000 });
+  assert(!existsSync(`${dl}/mv-s3.txt`) && !existsSync(`${dl}/mv-s3-dir`), 'local sources are gone');
+
+  step('Shift-drag moves an object, then a prefix, within S3');
+  await shiftDrag(row(right, 'mv-s3.txt'), row(right, 'mv-s3-dir').locator('[data-file-drop-target]'));
+  await row(right, 'mv-s3.txt').waitFor({ state: 'detached', timeout: 20000 });
+  await right.getByLabel('New folder').click();
+  await page.keyboard.type('mv-s3-target');
+  await page.keyboard.press('Enter');
+  await row(right, 'mv-s3-target').waitFor({ timeout: 15000 });
+  await shiftDrag(row(right, 'mv-s3-dir'), row(right, 'mv-s3-target').locator('[data-file-drop-target]'));
+  await row(right, 'mv-s3-dir').waitFor({ state: 'detached', timeout: 20000 });
+
+  step('F6 moves the prefix from S3 to local');
+  await row(right, 'mv-s3-target').click();
+  await page.keyboard.press('F6');
+  await row(left, 'mv-s3-target').waitFor({ timeout: 20000 });
+  await row(right, 'mv-s3-target').waitFor({ state: 'detached', timeout: 20000 });
+  assert(readFileSync(`${dl}/mv-s3-target/mv-s3-dir/mv-s3.txt`, 'utf8') === 's3 moved\n', 'object arrived locally');
+  assert(readFileSync(`${dl}/mv-s3-target/mv-s3-dir/sub/inner.txt`, 'utf8') === 'inner\n', 'nested object arrived locally');
 });
