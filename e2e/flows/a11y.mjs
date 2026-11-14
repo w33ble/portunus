@@ -4,8 +4,8 @@ import { writeFileSync } from 'node:fs';
 /** WCAG 2.x minimums. Disabled controls are exempt from AA but must stay legible, so they get the UI-component floor. */
 export const MIN = { text: 4.5, placeholder: 4.5, icon: 3, disabled: 3 };
 
-/** Runs in the page: every piece of text and every icon inside the open dialog, with its colours composited over whatever is behind it. */
-function measureDialog() {
+/** Runs in the page: every piece of text and every icon inside `scope`, with its colours composited over whatever is behind it. */
+function measure(scope) {
   const channels = (s) => (s.match(/-?[\d.]+%?/g) ?? []).map((n) => (n.endsWith('%') ? parseFloat(n) / 100 : parseFloat(n)));
   const parse = (s) => {
     const n = channels(s);
@@ -48,19 +48,19 @@ function measureDialog() {
     return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility === 'visible';
   };
 
-  const dialog = document.querySelector('dialog[open]');
-  const walker = document.createTreeWalker(dialog, NodeFilter.SHOW_TEXT);
+  const root = document.querySelector(scope);
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     const el = n.parentElement;
     if (!n.textContent.trim() || !visible(el)) continue;
     add(el.closest(':disabled') ? 'disabled' : 'text', el, n.textContent, getComputedStyle(el).color);
   }
-  for (const input of dialog.querySelectorAll('input[placeholder]')) {
+  for (const input of root.querySelectorAll('input[placeholder]')) {
     if (input.value === '' && visible(input)) {
       add(input.disabled ? 'disabled' : 'placeholder', input, input.placeholder, getComputedStyle(input, '::placeholder').color);
     }
   }
-  for (const svg of dialog.querySelectorAll('button:not(:disabled) svg')) {
+  for (const svg of root.querySelectorAll('button:not(:disabled) svg')) {
     if (visible(svg)) add('icon', svg, svg.closest('button').getAttribute('aria-label') ?? 'icon', getComputedStyle(svg).color);
   }
   return rows;
@@ -72,8 +72,11 @@ export function contrastAudit(page) {
   const report = [];
 
   return {
-    /** Checks the open dialog in light and dark. axe covers enabled text; the custom pass covers what axe skips. */
-    async check(label) {
+    /**
+     * Checks the open dialog (or `scope`) in light and dark. axe covers enabled text; the custom pass
+     * covers what axe skips, and with `strictText` also enforces the text floor itself.
+     */
+    async check(label, { scope = 'dialog[open]', strictText = false } = {}) {
       for (const scheme of ['light', 'dark']) {
         await page.emulateMedia({ colorScheme: scheme });
         await page.mouse.move(0, 0);
@@ -81,7 +84,7 @@ export function contrastAudit(page) {
         const where = `${label} [${scheme}]`;
         const before = failures.length;
 
-        const axe = await new AxeBuilder({ page }).include('dialog[open]').withRules(['color-contrast']).analyze();
+        const axe = await new AxeBuilder({ page }).include(scope).withRules(['color-contrast']).analyze();
         for (const v of axe.violations) {
           for (const node of v.nodes) {
             const d = node.any[0]?.data ?? {};
@@ -89,10 +92,10 @@ export function contrastAudit(page) {
           }
         }
 
-        const rows = await page.evaluate(measureDialog);
+        const rows = await page.evaluate(measure, scope);
         for (const r of rows) {
           report.push({ dialog: label, scheme, ...r });
-          if (r.kind !== 'text' && r.ratio < MIN[r.kind]) {
+          if ((strictText || r.kind !== 'text') && r.ratio < MIN[r.kind]) {
             failures.push(`${where}: ${r.kind} “${r.text}” ${r.fg} on ${r.bg} = ${r.ratio}:1 (needs ${MIN[r.kind]})`);
           }
         }

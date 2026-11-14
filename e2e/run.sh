@@ -77,6 +77,8 @@ head -c 3145728 /dev/urandom >"$H/Documents/random.bin"
 for i in $(seq 1 12); do echo "photo $i" >"$H/Documents/photos/2026/img$i.jpg"; done
 # A real image and PDF for the quick preview.
 cp "$ROOT/e2e/fixtures/pixel.png" "$ROOT/e2e/fixtures/doc.pdf" "$H/Documents/"
+# Code the quick preview highlights: Go, a diff and a Dockerfile.
+cp "$ROOT/e2e/fixtures/sample.go" "$ROOT/e2e/fixtures/sample.patch" "$ROOT/e2e/fixtures/Dockerfile" "$H/Documents/"
 echo "existing remote" >"$E2E_DIR/remote/hello.txt"
 echo "only on remote" >"$E2E_DIR/remote/remote-only.txt"
 

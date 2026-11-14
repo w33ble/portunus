@@ -32,6 +32,7 @@ await flow('sftp', async (ctx) => {
   await row(left, 'photos').click({ modifiers: ['Control'] });
   await row(left, 'pixel.png').click({ modifiers: ['Control'] });
   await row(left, 'doc.pdf').click({ modifiers: ['Control'] });
+  await row(left, 'sample.go').click({ modifiers: ['Control'] });
   await page.keyboard.press('F5');
   await page.getByRole('button', { name: /overwrite/i }).waitFor({ timeout: 15000 });
   await shot('conflict');

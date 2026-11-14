@@ -1,9 +1,9 @@
-import { flow } from './lib.mjs';
+import { flow, openPreview } from './lib.mjs';
 import { contrastAudit } from './a11y.mjs';
 
 const REMOTE = `${process.env.E2E_DIR}/remote`;
 
-// Opens every dialog in each state a user can reach and checks text contrast in both colour schemes.
+// Opens every dialog in each state a user can reach, and the highlighted quick preview, and checks text contrast in both colour schemes.
 await flow('contrast', async ({ page, left, right, row, step, goTo }) => {
   const audit = contrastAudit(page);
   const dialog = page.locator('dialog[open]');
@@ -87,6 +87,20 @@ await flow('contrast', async ({ page, left, right, row, step, goTo }) => {
   await checked('Conflict');
   await dialog.getByRole('button', { name: /cancel job/i }).click();
   await dialog.waitFor({ state: 'detached' });
+
+  step('quick preview: highlighted code and a diff');
+  const panel = page.locator('section[data-preview]');
+  const previewed = async (name, token, label) => {
+    await openPreview({ page, row }, left, name);
+    await panel.locator(`pre ${token}`).first().waitFor({ timeout: 15000 });
+    // Every token class counts: axe samples text, so assert on the custom measurement too.
+    await audit.check(label, { scope: 'section[data-preview]', strictText: true });
+  };
+  await previewed('sample.go', '.hljs-keyword', 'Preview, Go');
+  await previewed('sample.patch', '.hljs-addition', 'Preview, diff');
+  await previewed('Dockerfile', '.hljs-keyword', 'Preview, Dockerfile');
+  await page.keyboard.press('Escape');
+  await panel.waitFor({ state: 'detached' });
 
   step('S3 profiles: empty, form, saved, delete confirm');
   await connection.selectOption({ label: 'Manage S3 profiles…' });
