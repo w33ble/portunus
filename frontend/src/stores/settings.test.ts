@@ -11,6 +11,7 @@ const base: Settings = {
   perConnectionTransfers: 1,
   loadAppleKeychain: true,
   showHidden: false,
+  swipeNavigation: true,
 };
 
 beforeEach(() => {

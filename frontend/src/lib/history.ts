@@ -1,7 +1,15 @@
-/** Per-pane back/forward stacks of directory paths, newest last. */
+import type { Selection } from './selection';
+
+/** A folder in history, with the selection it had when the pane left it. */
+export interface Place {
+  readonly path: string;
+  readonly selection: Selection;
+}
+
+/** Per-pane back/forward stacks of places, newest last. */
 export interface History {
-  readonly back: readonly string[];
-  readonly forward: readonly string[];
+  readonly back: readonly Place[];
+  readonly forward: readonly Place[];
 }
 
 export const EMPTY_HISTORY: History = { back: [], forward: [] };
@@ -9,36 +17,36 @@ export const EMPTY_HISTORY: History = { back: [], forward: [] };
 /** Oldest entries are dropped beyond this many per stack. */
 export const HISTORY_LIMIT = 50;
 
-const capped = (stack: readonly string[]) =>
+const capped = (stack: readonly Place[]) =>
   stack.length > HISTORY_LIMIT ? stack.slice(stack.length - HISTORY_LIMIT) : stack;
 
 /** Records leaving `from` for `to`. Staying put changes nothing; going somewhere new drops forward. */
-export function visit(history: History, from: string, to: string): History {
-  if (from === to) return history;
+export function visit(history: History, from: Place, to: string): History {
+  if (from.path === to) return history;
   return { back: capped([...history.back, from]), forward: [] };
 }
 
 export interface Step {
   history: History;
-  path: string;
+  place: Place;
 }
 
 /** Steps back from `current`, or null when there's nowhere to go. */
-export function back(history: History, current: string): Step | null {
-  const path = history.back.at(-1);
-  if (path === undefined) return null;
+export function back(history: History, current: Place): Step | null {
+  const place = history.back.at(-1);
+  if (place === undefined) return null;
   return {
-    path,
+    place,
     history: { back: history.back.slice(0, -1), forward: capped([...history.forward, current]) },
   };
 }
 
 /** Steps forward from `current`, or null when there's nowhere to go. */
-export function forward(history: History, current: string): Step | null {
-  const path = history.forward.at(-1);
-  if (path === undefined) return null;
+export function forward(history: History, current: Place): Step | null {
+  const place = history.forward.at(-1);
+  if (place === undefined) return null;
   return {
-    path,
+    place,
     history: { back: capped([...history.back, current]), forward: history.forward.slice(0, -1) },
   };
 }
@@ -66,4 +74,9 @@ export function historyKey(e: NavKeyEvent, mac: boolean): 'back' | 'forward' | n
 export function historyShortcut(direction: 'back' | 'forward', mac: boolean): string {
   if (mac) return direction === 'back' ? '⌘[' : '⌘]';
   return direction === 'back' ? 'Alt+←' : 'Alt+→';
+}
+
+/** Back/forward for the extra mouse buttons: MouseEvent.button 3 and 4. */
+export function historyButton(button: number): 'back' | 'forward' | null {
+  return button === 3 ? 'back' : button === 4 ? 'forward' : null;
 }

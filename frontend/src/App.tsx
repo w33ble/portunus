@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
 import styles from './App.module.css';
+import { events } from './api/events';
 import { DialogHost } from './components/dialogs/DialogHost';
 import { Pane } from './components/pane/Pane';
+import { swipeFromOs } from './components/pane/useSwipeNavigation';
 import { PreviewPanel } from './components/preview/PreviewPanel';
 import { StatusBar } from './components/shell/StatusBar';
 import { Titlebar } from './components/shell/Titlebar';
@@ -41,6 +43,7 @@ export default function App() {
   const tab = useUi((s) => s.tab);
   const preview = useUi((s) => s.preview);
   useEffect(() => startBackend(), []);
+  useEffect(() => events.swipe(swipeFromOs), []);
   useGlobalShortcuts();
 
   return (

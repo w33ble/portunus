@@ -21,3 +21,60 @@
 .pane[hidden] {
   display: none;
 }
+
+/* Edge arrow that follows a back/forward swipe (useSwipeNavigation sets the data attributes). */
+.swipe {
+  --swipe: 0;
+  position: absolute;
+  top: 50%;
+  left: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-top: -18px;
+  border-radius: 50%;
+  background: var(--bg-chrome-active);
+  box-shadow: var(--shadow-menu);
+  color: var(--text-secondary);
+  opacity: 0;
+  pointer-events: none;
+  translate: calc(-100% + var(--swipe) * 48px) 0;
+  transition-property: opacity, background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.swipe[data-direction] {
+  opacity: var(--swipe);
+}
+
+.swipe[data-direction='forward'] {
+  right: 0;
+  left: auto;
+  translate: calc(100% - var(--swipe) * 48px) 0;
+}
+
+.swipe[data-direction='forward'] svg {
+  rotate: 180deg;
+}
+
+/* Past the threshold: the navigation has happened. */
+.swipe[data-armed] {
+  background: var(--accent-fill);
+  color: var(--accent-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swipe {
+    left: 12px;
+    translate: none;
+  }
+
+  .swipe[data-direction='forward'] {
+    right: 12px;
+    left: auto;
+    translate: none;
+  }
+}

@@ -19,6 +19,7 @@ import (
 	"github.com/w33ble/portunus/internal/settings"
 	"github.com/w33ble/portunus/internal/sshcfg"
 	"github.com/w33ble/portunus/internal/sshconn"
+	"github.com/w33ble/portunus/internal/swipe"
 	"github.com/w33ble/portunus/internal/transfer"
 	"github.com/w33ble/portunus/internal/vfs"
 	"github.com/w33ble/portunus/internal/vfs/localfs"
@@ -136,6 +137,12 @@ func (a *App) HandleDrop(paths []string, attrs map[string]string) {
 		norm[i] = filepath.ToSlash(p)
 	}
 	a.emit(EventDrop, DropFiles{Paths: norm, Pane: attrs["data-pane"], Dir: attrs["data-path"]})
+}
+
+// HandleSwipe forwards an OS back/forward swipe to the frontend, which applies it to the
+// pane under the pointer.
+func (a *App) HandleSwipe(d swipe.Direction) {
+	a.emit(EventSwipe, d)
 }
 
 func (a *App) applySettings(s settings.Settings) {

@@ -14,6 +14,7 @@ import (
 	"github.com/w33ble/portunus/internal/profiles"
 	"github.com/w33ble/portunus/internal/services"
 	"github.com/w33ble/portunus/internal/state"
+	"github.com/w33ble/portunus/internal/swipe"
 	"github.com/w33ble/portunus/internal/version"
 )
 
@@ -92,6 +93,8 @@ func main() {
 			}
 			core.HandleDrop(e.Context().DroppedFiles(), attrs)
 		})
+
+		swipe.Watch(core.HandleSwipe)
 	})
 
 	if err := app.Run(); err != nil {

@@ -4,6 +4,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"github.com/w33ble/portunus/internal/prompt"
+	"github.com/w33ble/portunus/internal/swipe"
 	"github.com/w33ble/portunus/internal/transfer"
 )
 
@@ -11,6 +12,8 @@ const (
 	EventTransfers   = "transfers:update"
 	EventConnections = "connections:changed"
 	EventDrop        = "drop:files"
+	// EventSwipe carries a swipe.Direction from the OS's own swipe gesture (macOS).
+	EventSwipe = "nav:swipe"
 )
 
 // DropFiles reports files dropped from the OS onto a pane.
@@ -25,6 +28,7 @@ func init() {
 	application.RegisterEvent[transfer.Update](EventTransfers)
 	application.RegisterEvent[[]Connection](EventConnections)
 	application.RegisterEvent[DropFiles](EventDrop)
+	application.RegisterEvent[swipe.Direction](EventSwipe)
 	application.RegisterEvent[prompt.HostKeyPrompt](prompt.EventHostKey)
 	application.RegisterEvent[prompt.SecretPrompt](prompt.EventSecret)
 	application.RegisterEvent[prompt.ConflictPrompt](prompt.EventConflict)
