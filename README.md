@@ -27,7 +27,7 @@ Download the latest build from [Releases](https://github.com/w33ble/portunus/rel
 - **macOS** (Apple silicon and Intel): open the `.dmg` and drag Portunus to Applications. The app isn't signed or notarized, so macOS quarantines it and **Open Anyway** in Privacy & Security isn't enough. Clear the quarantine flag once in Terminal, then open it as usual:
 
   ```sh
-  xattr -dr com.apple.quarantine /Applications/portunus.app
+  xattr -dr com.apple.quarantine /Applications/Portunus.app
   ```
 
 - **Debian/Ubuntu**: `sudo apt install ./portunus_*.deb`. **Fedora/RHEL**: `sudo dnf install ./portunus-*.rpm`. Needs GTK 4 and WebKitGTK 6.0 (Ubuntu 24.04+, Debian 13+, Fedora 40+).

@@ -62,7 +62,8 @@ jobs:
       - run: wails3 task darwin:create:dmg
       - name: Verify and collect
         run: |
-          app=bin/portunus.app
+          app=bin/Portunus.app
+          ls bin | grep -qx 'Portunus.app' # exact case; the runner's filesystem is case-insensitive
           test "$(plutil -extract CFBundleShortVersionString raw "$app/Contents/Info.plist")" = "$PORTUNUS_VERSION"
           lipo "$app/Contents/MacOS/portunus" -verify_arch arm64 x86_64
           "$app/Contents/MacOS/portunus" --version | grep -q "^portunus $PORTUNUS_VERSION "
@@ -147,7 +148,7 @@ jobs:
             --title "Portunus $VERSION" --generate-notes $prerelease --notes "$(cat <<'EOF'
           ## Install
 
-          - **macOS** (Apple silicon and Intel): open the `.dmg` and drag Portunus to Applications. The app isn't signed or notarized, so macOS quarantines it and **Open Anyway** in Privacy & Security isn't enough. Clear the quarantine flag once in Terminal, then open it as usual: `xattr -dr com.apple.quarantine /Applications/portunus.app`
+          - **macOS** (Apple silicon and Intel): open the `.dmg` and drag Portunus to Applications. The app isn't signed or notarized, so macOS quarantines it and **Open Anyway** in Privacy & Security isn't enough. Clear the quarantine flag once in Terminal, then open it as usual: `xattr -dr com.apple.quarantine /Applications/Portunus.app`
           - **Debian/Ubuntu**: `sudo apt install ./portunus_*.deb`. **Fedora/RHEL**: `sudo dnf install ./portunus-*.rpm`. Needs GTK 4 and WebKitGTK 6.0 (Ubuntu 24.04+, Debian 13+, Fedora 40+).
           - **Other Linux**: the `.tar.gz` contains the binary.
 
