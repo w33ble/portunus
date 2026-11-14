@@ -89,6 +89,7 @@ mise run build           # cgo build -> bin/portunus
 - **Styling**: one CSS Module per component, plus the shared `ui/controls.module.css`. Take every colour from the tokens in `styles.css` (light/dark via `prefers-color-scheme`). Buttons with white text use `--accent-fill`; `--accent` is for rings, icons and text. Global `:focus-visible` draws a box-shadow ring, so a component with its own focus cue overrides it.
 - **File list** (`components/pane`): rows are virtualized with TanStack Virtual at a fixed 22 px, with `role="listbox"`/`"option"`. Selection is pruned to visible entries, so filtered-out items drop out. The pane is a CSS size container: columns hide via `@container` below 440px and 320px.
 - **Keyboard**: pane-wide shortcuts (⌘L, ⌘R, ⌘⇧N, ⌘F, history) live in `Pane.tsx`; list keys (arrows, type-ahead, Space, F2, F5, Delete, Tab) live in `useFileListKeys.ts`.
+- **History gestures**: mouse back/forward (`button` 3/4) are handled in `Pane.tsx`. Trackpad swipes come in as horizontal `wheel` events: `lib/swipe.ts` is the pure detector (thresholds, momentum lockout, ignoring targets that scroll sideways), and `useSwipeNavigation.ts` attaches it non-passively and draws the edge arrow straight on the DOM, so the file list doesn't re-render per event. History entries (`lib/history.ts`) keep the selection, which is restored once the listing completes.
 - **`data-pane`**: it marks both the pane `<section>` and folder drop targets inside it. Select panes with `section[data-pane]`.
 
 **Process**
