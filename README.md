@@ -12,6 +12,7 @@ Status: MVP. It runs on macOS and Linux. Builds are on the [Releases](https://gi
 
 - Two panes, each on any connection: local disk, an SSH host, or an S3 bucket.
 - Type to find: in a file list, typing a name jumps to the first entry that starts with it, as in Finder. ⌘F (Ctrl+F) opens a filter that narrows the list with fuzzy, case- and accent-insensitive matching, best matches first. Typing `/` or `~` starts a path.
+- Quick preview: Space shows the entry under the cursor in place of the other pane, on any connection. Text and code show the first 1 MB, images up to 20 MB, and PDFs up to 50 MB when the webview has a PDF viewer. HTML shows as text. Folders show how many items they hold and the total size of their files. Binary and oversized files show metadata only. The preview follows the arrow keys and reads only the entry the cursor stops on. Space or Esc closes it.
 - SSH hosts come from `~/.ssh/config`, including `Include` and `Match`. Settings are resolved by `ssh -G`, so behavior matches the `ssh` command.
 - Authentication through ssh-agent, `IdentityAgent` (1Password, Secretive), and key files (passphrase prompted only when needed), then keyboard-interactive and password. `ProxyJump` works; `ProxyCommand` doesn't yet.
 - Host keys are checked against `known_hosts`. Unknown keys get a trust prompt and are saved to `~/.ssh/known_hosts`, or to the app's own file if that isn't writable. A changed key always blocks the connection.
@@ -71,7 +72,7 @@ Go lint and tests run with the `purego` build tag. That's Wails' CGO-free backen
 
 - Go unit and integration tests run against real servers. SFTP tests start an unprivileged OpenSSH `sshd`. S3 tests start RustFS (an S3-compatible server) in Docker and skip when Docker isn't available. A shared conformance suite (`internal/vfs/vfstest`) runs against every backend.
 - Frontend tests use vitest (`pnpm --dir frontend test`).
-- `mise run e2e` builds the app in Wails server mode (`-tags server`), starts sshd and RustFS with throwaway fixtures, and drives the real UI with Playwright in Docker: connect, trust a host key, copy with conflicts, drag, delete, rename, and an S3 round trip. Screenshots land in `e2e/out/`.
+- `mise run e2e` builds the app in Wails server mode (`-tags server`), starts sshd and RustFS with throwaway fixtures, and drives the real UI with Playwright in Docker: connect, trust a host key, copy with conflicts, drag, delete, rename, an S3 round trip, and quick previews of text, an image and a PDF on local, SFTP and S3. Screenshots land in `e2e/out/`.
 - The same run opens every dialog in light and dark and checks contrast: axe-core's `color-contrast` rule for enabled text, plus a custom pass for what axe skips (disabled controls at least 3:1, placeholders 4.5:1, icon buttons 3:1). The measurements land in `e2e/out/contrast.json`. Run it alone with `E2E_FLOWS=contrast mise run e2e`; flows are the names in `e2e/flows/`.
 
 ### CI
@@ -128,6 +129,7 @@ Files are JSON, written atomically. Secrets (S3 secret keys) stay in the OS keyc
 main.go                  Wails bootstrap, file-drop forwarding
 internal/services        Wails-bound services, connection registry, error mapping
 internal/transfer        transfer engine: jobs, scheduling, conflicts, progress
+internal/preview         quick preview: type detection, size limits, text truncation
 internal/vfs             filesystem contract + conformance suite
 internal/vfs/localfs     local disk
 internal/vfs/sftpfs      SFTP (pkg/sftp)
