@@ -1,6 +1,7 @@
 import { type DragEvent, type MouseEvent, memo } from 'react';
 import type { Entry } from '../../api/types';
 import { formatBytes, formatModified } from '../../lib/format';
+import { matchName } from '../../lib/match';
 import type { PaneId } from '../../stores/paneTypes';
 import { Icon } from '../ui/Icon';
 import styles from './FileList.module.css';
@@ -12,6 +13,8 @@ interface Props {
   top: number;
   selected: boolean;
   cursor: boolean;
+  /** Active filter; matched characters are emphasized. */
+  query: string;
   dropTarget: boolean;
   onClick: (entry: Entry, event: MouseEvent) => void;
   onOpen: (entry: Entry) => void;
@@ -34,6 +37,7 @@ export const FileRow = memo(function FileRow({
   top,
   selected,
   cursor,
+  query,
   dropTarget,
   onClick,
   onOpen,
@@ -57,6 +61,8 @@ export const FileRow = memo(function FileRow({
         onDrop: (e: DragEvent) => onDrop(entry, e),
       }
     : {};
+
+  const match = query.trim() === '' ? null : matchName(entry.name, query);
 
   return (
     <div
@@ -84,7 +90,15 @@ export const FileRow = memo(function FileRow({
             className={styles.icon}
             data-kind={entry.isDir ? 'dir' : 'file'}
           />
-          <span className={styles.nameText}>{entry.name}</span>
+          <span className={styles.nameText}>
+            {match
+              ? match.highlight((part, i) => (
+                  <mark key={i} className={styles.match}>
+                    {part}
+                  </mark>
+                ))
+              : entry.name}
+          </span>
         </span>
       </span>
       <span className={styles.size}>{entry.isDir ? '—' : formatBytes(entry.size)}</span>

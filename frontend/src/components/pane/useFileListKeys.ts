@@ -1,6 +1,7 @@
 import type { KeyboardEvent, RefObject } from 'react';
 import type { Entry } from '../../api/types';
-import { type Selection, jumpTo, moveCursor, selectAll } from '../../lib/selection';
+import { EMPTY_TYPE_AHEAD, type TypeAhead, typeAheadIndex, typeKey } from '../../lib/match';
+import { type Selection, jumpTo, moveCursor, selectAll, selectOnly } from '../../lib/selection';
 import { copyToOtherPane, openEntry, requestDelete, requestRename } from '../../stores/fileOps';
 import { type PaneId, otherPane } from '../../stores/paneTypes';
 import { usePanes } from '../../stores/panes';
@@ -11,7 +12,12 @@ interface Args {
   visible: readonly Entry[];
   selection: Selection;
   pageRows: number;
-  scrollerRef: RefObject<HTMLDivElement | null>;
+  filtering: boolean;
+  typeAhead: RefObject<TypeAhead>;
+  /** Shows the typed prefix; empty once it resets. */
+  onTyped: (text: string) => void;
+  /** Opens the path editor with `prefill` typed in. */
+  onEditPath: (prefill: string) => void;
 }
 
 function focusPane(id: PaneId): void {
@@ -21,8 +27,9 @@ function focusPane(id: PaneId): void {
     ?.focus({ preventScroll: true });
 }
 
-/** Keyboard handling for a focused file list. Pane-wide shortcuts (⌘L, ⌘R) live in Pane. */
-export function useFileListKeys({ paneId, visible, selection, pageRows }: Args) {
+/** Keyboard handling for a focused file list. Pane-wide shortcuts (⌘L, ⌘R, ⌘F) live in Pane. */
+export function useFileListKeys(args: Args) {
+  const { paneId, visible, selection, pageRows, filtering, typeAhead } = args;
   const panes = usePanes.getState();
   const paths = visible.map((e) => e.path);
   const cursorEntry = visible.find((e) => e.path === selection.cursor);
@@ -32,6 +39,32 @@ export function useFileListKeys({ paneId, visible, selection, pageRows }: Args) 
     const move = (delta: number) => {
       event.preventDefault();
       panes.setSelection(paneId, moveCursor(selection, paths, delta, event.shiftKey));
+    };
+
+    // Finder-style: printable keys jump to the first name starting with what was typed.
+    const typeToFind = () => {
+      if (mod || event.nativeEvent.isComposing || [...event.key].length !== 1) return;
+      const next = typeKey(typeAhead.current, event.key, Date.now());
+      // A lone space keeps its default (scroll); "/" or "~" first starts a path instead.
+      if (next.text === ' ') return;
+      event.preventDefault();
+      if (next.text === '/' || next.text === '~') {
+        typeAhead.current = EMPTY_TYPE_AHEAD;
+        args.onEditPath(next.text);
+        return;
+      }
+      typeAhead.current = next;
+      args.onTyped(next.text);
+      const cursor = selection.cursor === null ? -1 : paths.indexOf(selection.cursor);
+      const target =
+        visible[
+          typeAheadIndex(
+            visible.map((e) => e.name),
+            next.text,
+            cursor
+          )
+        ];
+      if (target) panes.setSelection(paneId, selectOnly(target.path));
     };
 
     switch (event.key) {
@@ -83,7 +116,13 @@ export function useFileListKeys({ paneId, visible, selection, pageRows }: Args) 
         copyToOtherPane(paneId);
         break;
       case 'Escape':
-        panes.setSelection(paneId, { selected: new Set(), anchor: null, cursor: selection.cursor });
+        if (filtering) panes.closeFilter(paneId);
+        else
+          panes.setSelection(paneId, {
+            selected: new Set(),
+            anchor: null,
+            cursor: selection.cursor,
+          });
         break;
       case 'Tab':
         event.preventDefault();
@@ -94,9 +133,10 @@ export function useFileListKeys({ paneId, visible, selection, pageRows }: Args) 
         if (mod) {
           event.preventDefault();
           panes.setSelection(paneId, selectAll(paths, selection));
-        }
+        } else typeToFind();
         break;
       default:
+        typeToFind();
         break;
     }
   };

@@ -258,6 +258,22 @@ describe('refreshWhere', () => {
   });
 });
 
+describe('filter', () => {
+  it('survives a refresh and clears when the pane navigates', async () => {
+    captureLists();
+    await openLocal();
+    usePanes.getState().openFilter('left');
+    usePanes.getState().setFilter('left', 'rep');
+    usePanes.getState().refresh('left');
+    expect(left().filter).toBe('rep');
+    usePanes.getState().openFilter('left');
+    expect(left().filter).toBe('rep');
+
+    usePanes.getState().navigate('left', '/home/docs');
+    expect(left().filter).toBeNull();
+  });
+});
+
 describe('navigation helpers', () => {
   it('goUp stops at the root', async () => {
     captureLists();

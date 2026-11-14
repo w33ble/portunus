@@ -39,6 +39,8 @@ export interface PaneState {
   sort: SortState;
   /** Back/forward stacks of folders visited on this connection. */
   history: History;
+  /** Filter query; null when the filter field is closed. Cleared on navigation. */
+  filter: string | null;
 }
 
 type PaneMap = Readonly<Record<PaneId, PaneState>>;
@@ -62,6 +64,10 @@ interface PanesState {
   applyPages: (batch: ReadonlyMap<string, readonly Entry[]>) => void;
   setSelection: (id: PaneId, selection: Selection) => void;
   toggleSort: (id: PaneId, key: SortKey) => void;
+  /** Shows the filter field, keeping an existing query. */
+  openFilter: (id: PaneId) => void;
+  setFilter: (id: PaneId, query: string) => void;
+  closeFilter: (id: PaneId) => void;
   dismissError: (id: PaneId) => void;
 }
 
@@ -76,6 +82,7 @@ function blankPane(id: PaneId): PaneState {
     selection: EMPTY_SELECTION,
     sort: DEFAULT_SORT,
     history: EMPTY_HISTORY,
+    filter: null,
   };
 }
 
@@ -121,6 +128,7 @@ export const usePanes = create<PanesState>()((set, get) => {
       status: { kind: 'loading' },
       listing: startListing(requestId, mode === 'refresh' ? shownEntries(pane.listing) : null),
       selection: mode === 'refresh' ? pane.selection : EMPTY_SELECTION,
+      filter: mode === 'refresh' ? pane.filter : null,
     }));
 
     const handle = api.files.list(connId, path, (entries) => pageBatcher.push(requestId, entries));
@@ -250,6 +258,10 @@ export const usePanes = create<PanesState>()((set, get) => {
     setSelection: (id, selection) => patch(id, (pane) => ({ ...pane, selection })),
 
     toggleSort: (id, key) => patch(id, (pane) => ({ ...pane, sort: toggleSort(pane.sort, key) })),
+
+    openFilter: (id) => patch(id, (pane) => ({ ...pane, filter: pane.filter ?? '' })),
+    setFilter: (id, query) => patch(id, (pane) => ({ ...pane, filter: query })),
+    closeFilter: (id) => patch(id, (pane) => ({ ...pane, filter: null })),
 
     dismissError(id) {
       patch(id, (pane) =>
