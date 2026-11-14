@@ -37,6 +37,7 @@ vi.mock('./api/events', () => ({
     promptSecret: on('promptSecret'),
     promptConflict: on('promptConflict'),
     promptResolved: on('promptResolved'),
+    swipe: on('swipe'),
   },
 }));
 
@@ -116,6 +117,7 @@ beforeEach(async () => {
   useSettings.setState(useSettings.getInitialState(), true);
   useConnections.setState(useConnections.getInitialState(), true);
   vi.mocked(api.settings.get).mockResolvedValue(settings);
+  vi.mocked(api.settings.swipeFromScroll).mockResolvedValue(true);
   vi.mocked(api.connections.list).mockResolvedValue([localConnection()]);
   vi.mocked(api.connections.sshHosts).mockResolvedValue([{ alias: 'prod', source: 'c:1' }]);
   vi.mocked(api.connections.sshAvailable).mockResolvedValue('');
@@ -481,6 +483,27 @@ describe('App', () => {
         await intoDocuments();
         act(() => useSettings.setState({ settings: { ...settings, swipeNavigation: false } }));
         await swipe(-20);
+        expect(leftPath()).toBe('/home/Documents');
+        emit('swipe', 'back');
+        await flush();
+        expect(leftPath()).toBe('/home/Documents');
+      });
+
+      it('leaves two-finger scrolls alone when the OS keeps them for scrolling', async () => {
+        await intoDocuments();
+        act(() => useSettings.setState({ swipeFromScroll: false }));
+        await swipe(-20);
+        expect(leftPath()).toBe('/home/Documents');
+      });
+
+      it('follows the OS swipe gesture whatever the scroll setting', async () => {
+        await intoDocuments();
+        act(() => useSettings.setState({ swipeFromScroll: false }));
+        emit('swipe', 'back');
+        await flush();
+        expect(leftPath()).toBe('/home');
+        emit('swipe', 'forward');
+        await flush();
         expect(leftPath()).toBe('/home/Documents');
       });
     });

@@ -49,7 +49,9 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
               Swipe to go back and forward
             </label>
             <p className={controls.hint}>
-              A two-finger sideways swipe on the trackpad over a pane moves through its history.
+              {IS_MAC
+                ? 'Uses the gesture chosen for “Swipe between pages” in System Settings → Trackpad.'
+                : 'A two-finger sideways swipe on the touchpad over a pane moves through its history.'}
             </p>
           </div>
           {IS_MAC && (

@@ -87,7 +87,7 @@ export function Pane({ paneId, hidden = false }: { paneId: PaneId; hidden?: bool
       <div className={styles.list}>
         <FileList paneId={paneId} onEditPath={(prefill) => pathBar.current?.edit(prefill)} />
         <PaneBanner paneId={paneId} />
-        <div ref={swipeArrow} className={styles.swipe} aria-hidden="true">
+        <div ref={swipeArrow} className={styles.swipe} aria-hidden="true" data-swipe-arrow="">
           <Icon name="chevronLeft" />
         </div>
       </div>

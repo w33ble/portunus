@@ -6,9 +6,13 @@ import {
   type SwipeStep,
   trackSwipe,
 } from '../../lib/swipe';
-import type { PaneId } from '../../stores/paneTypes';
+import { type PaneId, parsePaneId } from '../../stores/paneTypes';
 import { usePanes } from '../../stores/panes';
-import { selectSwipeNavigation, useSettings } from '../../stores/settings';
+import { selectScrollSwipes, selectSwipeNavigation, useSettings } from '../../stores/settings';
+import { useUi } from '../../stores/ui';
+
+/** How long the arrow stays up after an OS swipe, which has no progress to follow. */
+const FLASH_MS = 300;
 
 /** Whether an element between `target` and `root` can still scroll horizontally toward `sign`. */
 function canScrollX(target: EventTarget | null, root: HTMLElement, sign: -1 | 1): boolean {
@@ -32,6 +36,11 @@ function hasHistory(paneId: PaneId, direction: SwipeDirection): boolean {
   return (direction === 'back' ? history.back : history.forward).length > 0;
 }
 
+function go(paneId: PaneId, direction: SwipeDirection): void {
+  if (direction === 'back') usePanes.getState().goBack(paneId);
+  else usePanes.getState().goForward(paneId);
+}
+
 /** Drawn straight on the DOM: a re-render per wheel event would re-render the file list. */
 function draw(indicator: HTMLElement | null, progress: SwipeStep['progress']): void {
   if (indicator === null) return;
@@ -47,15 +56,34 @@ function draw(indicator: HTMLElement | null, progress: SwipeStep['progress']): v
 }
 
 /**
+ * The OS's own swipe gesture (macOS three-finger swipe, sent as one event): steps the pane
+ * under the pointer, or the active pane when the pointer is elsewhere, and flashes its arrow.
+ */
+export function swipeFromOs(direction: SwipeDirection): void {
+  if (!selectSwipeNavigation(useSettings.getState())) return;
+  const hovered = document.querySelector<HTMLElement>('section[data-pane]:hover');
+  const paneId = parsePaneId(hovered?.dataset['pane'] ?? '') ?? useUi.getState().activePane;
+  if (!hasHistory(paneId, direction)) return;
+
+  const arrow = document.querySelector<HTMLElement>(
+    `section[data-pane="${paneId}"] [data-swipe-arrow]`
+  );
+  draw(arrow, { direction, amount: 1 });
+  setTimeout(() => draw(arrow, null), FLASH_MS);
+  go(paneId, direction);
+}
+
+/**
  * Two-finger horizontal swipes over `root` go back and forward in the pane's history, with an
- * edge arrow in `indicator` that follows the swipe. Off when the setting is.
+ * edge arrow in `indicator` that follows the swipe. Off when the setting is, or when the OS
+ * keeps two-finger scrolls for scrolling (macOS with "Swipe between pages" on three fingers).
  */
 export function useSwipeNavigation(
   paneId: PaneId,
   root: RefObject<HTMLElement | null>,
   indicator: RefObject<HTMLElement | null>
 ): void {
-  const enabled = useSettings(selectSwipeNavigation);
+  const enabled = useSettings(selectScrollSwipes);
 
   useEffect(() => {
     const el = root.current;
@@ -77,8 +105,7 @@ export function useSwipeNavigation(
       clearTimeout(hideTimer);
       hideTimer = setTimeout(() => draw(arrow, null), GESTURE_GAP_MS);
 
-      if (step.fire === 'back') usePanes.getState().goBack(paneId);
-      else if (step.fire === 'forward') usePanes.getState().goForward(paneId);
+      if (step.fire !== null) go(paneId, step.fire);
     };
 
     el.addEventListener('wheel', onWheel, { passive: false });

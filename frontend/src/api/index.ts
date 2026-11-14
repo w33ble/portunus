@@ -123,6 +123,8 @@ export const prompts = {
 export const settings = {
   get: (): Promise<Settings> => call(SettingsService.Get()),
   save: (next: Settings): Promise<Settings> => call(SettingsService.Save(next)),
+  /** Whether the OS treats two-finger sideways scrolls as back/forward swipes. */
+  swipeFromScroll: (): Promise<boolean> => call(SettingsService.SwipeFromScroll()),
 };
 
 export const version = {

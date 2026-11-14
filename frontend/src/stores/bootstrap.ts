@@ -9,6 +9,8 @@ import { useSettings } from './settings';
 import { useTransfers } from './transfers';
 import { useUi } from './ui';
 
+const onFocus = () => void useSettings.getState().loadSystem();
+
 /** Subscribes to backend events, loads initial state, and opens the panes. Returns the cleanup. */
 export function startBackend(): () => void {
   const off = [
@@ -29,11 +31,16 @@ export function startBackend(): () => void {
   // leave them blank.
   usePanes.getState().init();
   void useSettings.getState().load();
+  void useSettings.getState().loadSystem();
   void useConnections.getState().load();
   void useTransfers.getState().init();
   void usePrompts.getState().init();
 
+  // System Settings may have changed while the window was in the background.
+  window.addEventListener('focus', onFocus);
+
   return () => {
+    window.removeEventListener('focus', onFocus);
     for (const unsubscribe of off) unsubscribe();
   };
 }

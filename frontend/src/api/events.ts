@@ -1,5 +1,6 @@
 import { Events } from '@wailsio/runtime';
 import * as names from '../../bindings/events';
+import { Direction } from '../../bindings/github.com/w33ble/portunus/internal/swipe';
 import type {
   ConflictPrompt,
   Connection,
@@ -26,4 +27,10 @@ export const events = {
     Events.On(names.PromptConflict, (ev) => cb(ev.data)),
   promptResolved: (cb: (id: string) => void): Unsubscribe =>
     Events.On(names.PromptResolved, (ev) => cb(ev.data)),
+  /** The OS's own back/forward swipe (macOS three-finger swipe). */
+  swipe: (cb: (direction: 'back' | 'forward') => void): Unsubscribe =>
+    Events.On(names.NavSwipe, (ev) => {
+      if (ev.data === Direction.Back) cb('back');
+      else if (ev.data === Direction.Forward) cb('forward');
+    }),
 };
