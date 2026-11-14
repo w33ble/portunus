@@ -102,6 +102,115 @@
   overflow-wrap: anywhere;
 }
 
+.text code {
+  font: inherit;
+}
+
+/* highlight.js class names are global, so they are mapped here to the theme's --syntax-* tokens. */
+.text :global(.hljs-comment),
+.text :global(.hljs-quote) {
+  color: var(--syntax-comment);
+}
+
+.text :global(.hljs-keyword),
+.text :global(.hljs-doctag),
+.text :global(.hljs-selector-tag),
+.text :global(.hljs-template-tag) {
+  color: var(--syntax-keyword);
+}
+
+.text :global(.hljs-string),
+.text :global(.hljs-link),
+.text :global(.hljs-code),
+.text :global(.hljs-formula) {
+  color: var(--syntax-string);
+}
+
+.text :global(.hljs-number) {
+  color: var(--syntax-number);
+}
+
+.text :global(.hljs-title),
+.text :global(.hljs-selector-id),
+.text :global(.hljs-selector-class) {
+  color: var(--syntax-title);
+}
+
+.text :global(.hljs-type),
+.text :global(.hljs-symbol),
+.text :global(.hljs-bullet),
+.text :global(.hljs-selector-pseudo) {
+  color: var(--syntax-type);
+}
+
+.text :global(.hljs-attr),
+.text :global(.hljs-attribute),
+.text :global(.hljs-property) {
+  color: var(--syntax-attr);
+}
+
+.text :global(.hljs-built_in) {
+  color: var(--syntax-built-in);
+}
+
+.text :global(.hljs-literal) {
+  color: var(--syntax-literal);
+}
+
+.text :global(.hljs-meta) {
+  color: var(--syntax-meta);
+}
+
+.text :global(.hljs-variable),
+.text :global(.hljs-template-variable),
+.text :global(.hljs-selector-attr) {
+  color: var(--syntax-variable);
+}
+
+.text :global(.hljs-name) {
+  color: var(--syntax-tag);
+}
+
+.text :global(.hljs-regexp) {
+  color: var(--syntax-regexp);
+}
+
+.text :global(.hljs-section) {
+  color: var(--syntax-section);
+  font-weight: 600;
+}
+
+.text :global(.hljs-strong) {
+  font-weight: 600;
+}
+
+.text :global(.hljs-emphasis) {
+  font-style: italic;
+}
+
+.text :global(.hljs-addition) {
+  background: var(--syntax-addition-bg);
+  color: var(--syntax-addition);
+}
+
+.text :global(.hljs-deletion) {
+  background: var(--syntax-deletion-bg);
+  color: var(--syntax-deletion);
+}
+
+/* Nested tokens: an interpolation keeps the surrounding text color unless it has its own class. */
+.text :global(.hljs-subst) {
+  color: inherit;
+}
+
+.text :global(.hljs-meta) :global(.hljs-string) {
+  color: var(--syntax-string);
+}
+
+.text :global(.hljs-meta) :global(.hljs-keyword) {
+  color: var(--syntax-meta);
+}
+
 .image {
   position: absolute;
   inset: 0;

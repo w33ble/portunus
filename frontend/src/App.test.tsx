@@ -193,6 +193,25 @@ const shownNames = () => namesOf('[role=option]');
 
 const preview = () => host.querySelector<HTMLElement>('section[data-preview]');
 const previewBody = () => host.querySelector<HTMLElement>('[data-preview-body]');
+const highlighted = () => preview()?.querySelector('pre .hljs-keyword');
+const textContent = (body: string) => ({
+  kind: 'text' as const,
+  text: body,
+  bytes: body.length,
+  truncated: false,
+});
+// The grammar loads through a real dynamic import, which fake timers can't advance, and a
+// state update only renders once its act scope ends, so poll with short real sleeps.
+const highlightedLater = async () => {
+  vi.useRealTimers();
+  for (let i = 0; i < 100 && !highlighted(); i++) {
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+  }
+  vi.useFakeTimers();
+  expect(highlighted()).not.toBeNull();
+};
 const rightPane = () => host.querySelector<HTMLElement>('section[data-pane="right"]');
 const settle = () =>
   act(async () => {
@@ -604,6 +623,62 @@ describe('App', () => {
       await key(leftList(), { key: 'n' });
       await key(leftList(), { key: ' ' });
       expect(preview()).toBeNull();
+    });
+
+    describe('syntax highlighting', () => {
+      const GO = 'package main\n\nfunc main() {}\n';
+      beforeEach(async () => {
+        // Rows sort by name: data.unknown, main.go, notes.txt.
+        vi.mocked(api.files.list).mockImplementation((_conn, _dir, onPage) => {
+          onPage([entry('main.go'), entry('notes.txt'), entry('data.unknown')]);
+          return { done: Promise.resolve(), cancel: vi.fn() };
+        });
+        vi.mocked(api.preview.load).mockImplementation(async (_conn, path) =>
+          textContent(path.endsWith('.go') ? GO : 'package main')
+        );
+        vi.useRealTimers();
+        act(() => usePanes.getState().refresh('left'));
+        await flush();
+        vi.useFakeTimers();
+      });
+
+      it('shows a Go file as plain text at once, then highlighted', async () => {
+        await clickRow('main.go');
+        await key(leftList(), { key: ' ' });
+        await settle();
+        expect(preview()?.querySelector('pre')?.textContent).toBe(GO);
+
+        await highlightedLater();
+        expect(highlighted()?.textContent).toBe('package');
+        expect(preview()?.querySelector('pre')?.textContent).toBe(GO);
+      });
+
+      it('leaves a file with an unknown extension as plain text', async () => {
+        await clickRow('data.unknown');
+        await key(leftList(), { key: ' ' });
+        await settle();
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(500);
+        });
+        expect(preview()?.querySelector('pre')?.textContent).toBe('package main');
+        expect(preview()?.querySelector('pre [class*="hljs"]')).toBeNull();
+      });
+
+      it('never marks the next file up with the previous file highlighting', async () => {
+        await clickRow('main.go');
+        await key(leftList(), { key: ' ' });
+        await settle();
+        await highlightedLater();
+
+        await key(leftList(), { key: 'ArrowDown' });
+        await settle();
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(500);
+        });
+        expect(preview()?.querySelector('h2')?.textContent).toBe('notes.txt');
+        expect(preview()?.querySelector('pre')?.textContent).toBe('package main');
+        expect(preview()?.querySelector('pre [class*="hljs"]')).toBeNull();
+      });
     });
   });
 });
