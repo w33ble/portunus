@@ -2,6 +2,8 @@ version: '3'
 
 vars:
   APP_NAME: "portunus"
+  # macOS .app bundle, DMG and volume name. Executables and Linux packages keep the lowercase APP_NAME.
+  APP_BUNDLE_NAME: "Portunus"
   BIN_DIR: "bin"
   PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "pnpm"}}'
   VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
