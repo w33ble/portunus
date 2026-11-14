@@ -36,3 +36,6 @@ export const useSettings = create<SettingsState>()((set, get) => ({
 }));
 
 export const selectShowHidden = (s: SettingsState): boolean => s.settings?.showHidden ?? false;
+/** On until settings load: it's the default. */
+export const selectSwipeNavigation = (s: SettingsState): boolean =>
+  s.settings?.swipeNavigation ?? true;

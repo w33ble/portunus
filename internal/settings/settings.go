@@ -26,6 +26,8 @@ type Settings struct {
 	LoadAppleKeychain bool `json:"loadAppleKeychain"`
 	// ShowHidden lists dotfiles in panes.
 	ShowHidden bool `json:"showHidden"`
+	// SwipeNavigation turns two-finger horizontal swipes over a pane into back and forward.
+	SwipeNavigation bool `json:"swipeNavigation"`
 }
 
 // Defaults are applied for missing or invalid fields.
@@ -35,6 +37,7 @@ func Defaults() Settings {
 		PerConnectionTransfers: 2,
 		LoadAppleKeychain:      true,
 		ShowHidden:             false,
+		SwipeNavigation:        true,
 	}
 }
 

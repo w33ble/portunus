@@ -12,7 +12,7 @@ import {
   shownEntries,
   startListing,
 } from '../lib/listing';
-import { EMPTY_HISTORY, type History, back, forward, visit } from '../lib/history';
+import { EMPTY_HISTORY, type History, type Place, back, forward, visit } from '../lib/history';
 import { normalizePath, parentPath } from '../lib/paths';
 import { EMPTY_SELECTION, type Selection } from '../lib/selection';
 import { DEFAULT_SORT, type SortKey, type SortState, toggleSort } from '../lib/sort';
@@ -102,6 +102,9 @@ function settle(pane: PaneState): PaneState {
 
 const PAGE_FLUSH_MS = 60;
 
+/** Where the pane is now, as a history entry. */
+const here = (pane: PaneState): Place => ({ path: pane.path, selection: pane.selection });
+
 export const usePanes = create<PanesState>()((set, get) => {
   const patch = (id: PaneId, update: (pane: PaneState) => PaneState) =>
     set((s) => ({ panes: { ...s.panes, [id]: update(s.panes[id]) } }));
@@ -114,7 +117,7 @@ export const usePanes = create<PanesState>()((set, get) => {
     connId: string,
     path: string,
     mode: 'navigate' | 'refresh',
-    opts: { lastTarget?: PaneState['lastTarget']; history?: History } = {}
+    opts: { lastTarget?: PaneState['lastTarget']; history?: History; restore?: Selection } = {}
   ) {
     const requestId = `${id}-${++requestCounter}`;
     inflight[id]?.cancel();
@@ -138,7 +141,15 @@ export const usePanes = create<PanesState>()((set, get) => {
       () => {
         if (!isCurrent(id, requestId)) return;
         pageBatcher.flush();
-        patch(id, (pane) => settle({ ...pane, listing: finishListing(pane.listing, requestId) }));
+        patch(id, (pane) =>
+          settle({
+            ...pane,
+            listing: finishListing(pane.listing, requestId),
+            // Back/forward reselect what was selected there, unless the user already picked.
+            selection:
+              opts.restore && pane.selection === EMPTY_SELECTION ? opts.restore : pane.selection,
+          })
+        );
       },
       (e: unknown) => {
         if (isCanceled(e) || !isCurrent(id, requestId)) return;
@@ -199,7 +210,7 @@ export const usePanes = create<PanesState>()((set, get) => {
       const pane = get().panes[id];
       if (pane.connId === null) return;
       const to = normalizePath(path);
-      load(id, pane.connId, to, 'navigate', { history: visit(pane.history, pane.path, to) });
+      load(id, pane.connId, to, 'navigate', { history: visit(pane.history, here(pane), to) });
     },
 
     goUp(id) {
@@ -207,23 +218,29 @@ export const usePanes = create<PanesState>()((set, get) => {
       const parent = parentPath(pane.path);
       if (pane.connId === null || parent === pane.path) return;
       load(id, pane.connId, parent, 'navigate', {
-        history: visit(pane.history, pane.path, parent),
+        history: visit(pane.history, here(pane), parent),
       });
     },
 
     goBack(id) {
       const pane = get().panes[id];
-      const step = pane.connId === null ? null : back(pane.history, pane.path);
+      const step = pane.connId === null ? null : back(pane.history, here(pane));
       if (pane.connId !== null && step) {
-        load(id, pane.connId, step.path, 'navigate', { history: step.history });
+        load(id, pane.connId, step.place.path, 'navigate', {
+          history: step.history,
+          restore: step.place.selection,
+        });
       }
     },
 
     goForward(id) {
       const pane = get().panes[id];
-      const step = pane.connId === null ? null : forward(pane.history, pane.path);
+      const step = pane.connId === null ? null : forward(pane.history, here(pane));
       if (pane.connId !== null && step) {
-        load(id, pane.connId, step.path, 'navigate', { history: step.history });
+        load(id, pane.connId, step.place.path, 'navigate', {
+          history: step.history,
+          restore: step.place.selection,
+        });
       }
     },
 

@@ -23,7 +23,7 @@ func TestSaveRoundTripsThroughDisk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := Settings{GlobalTransfers: 4, PerConnectionTransfers: 2, LoadAppleKeychain: false, ShowHidden: true}
+	want := Settings{GlobalTransfers: 4, PerConnectionTransfers: 2, LoadAppleKeychain: false, ShowHidden: true, SwipeNavigation: false}
 	if _, err := s.Save(want); err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +143,7 @@ func TestSaveKeepsOnDiskFieldNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "{\n  \"globalTransfers\": 4,\n  \"perConnectionTransfers\": 2,\n  \"loadAppleKeychain\": true,\n  \"showHidden\": false\n}\n"
+	want := "{\n  \"globalTransfers\": 4,\n  \"perConnectionTransfers\": 2,\n  \"loadAppleKeychain\": true,\n  \"showHidden\": false,\n  \"swipeNavigation\": true\n}\n"
 	if string(raw) != want {
 		t.Fatalf("settings.json = %q, want %q", raw, want)
 	}

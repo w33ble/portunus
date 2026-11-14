@@ -11,6 +11,7 @@ import { usePrompts } from './stores/prompts';
 import { useSettings } from './stores/settings';
 import { useTransfers } from './stores/transfers';
 import { PREVIEW_DELAY_MS } from './components/preview/usePreview';
+import { GESTURE_GAP_MS } from './lib/swipe';
 import { deferred, entry, localConnection } from './stores/testApi';
 import { useUi } from './stores/ui';
 import { useConnections } from './stores/connections';
@@ -48,6 +49,7 @@ const settings = {
   perConnectionTransfers: 1,
   loadAppleKeychain: true,
   showHidden: false,
+  swipeNavigation: true,
 };
 
 function showModal(this: HTMLDialogElement) {
@@ -200,6 +202,28 @@ const clickRow = (name: string) =>
       .find((r) => r.textContent?.includes(name))
       ?.click()
   );
+
+const leftPath = () => usePanes.getState().panes.left.path;
+const mouse = (pane: 'left' | 'right', button: number) =>
+  act(async () => {
+    const list = host.querySelector(`[data-pane="${pane}"] [data-filelist]`);
+    for (const type of ['mousedown', 'mouseup']) {
+      list?.dispatchEvent(new MouseEvent(type, { button, bubbles: true, cancelable: true }));
+    }
+  });
+/** A two-finger swipe: `n` wheel events of `deltaX` each, back to back. */
+const swipe = (deltaX: number, n = 20) =>
+  act(async () => {
+    for (let i = 0; i < n; i++) {
+      leftList()?.dispatchEvent(
+        new WheelEvent('wheel', { deltaX, bubbles: true, cancelable: true })
+      );
+    }
+  });
+const intoDocuments = async () => {
+  act(() => usePanes.getState().navigate('left', '/home/Documents'));
+  await flush();
+};
 
 describe('App', () => {
   it('opens both panes on the local home and hides dotfiles', () => {
@@ -415,6 +439,50 @@ describe('App', () => {
       expect(api.transfers.copy).toHaveBeenCalledWith(
         expect.objectContaining({ srcConn: 'local', dstDir: '/home' })
       );
+    });
+  });
+
+  describe('history gestures', () => {
+    it('mouse back and forward buttons move through the history and restore the selection', async () => {
+      await clickRow('notes.txt');
+      await intoDocuments();
+      expect(selectedNames()).toEqual([]);
+
+      await mouse('left', 3);
+      await flush();
+      expect(leftPath()).toBe('/home');
+      expect(selectedNames()).toEqual(['notes.txt']);
+
+      await mouse('left', 4);
+      await flush();
+      expect(leftPath()).toBe('/home/Documents');
+    });
+
+    it('mouse buttons act on the pane under the pointer', async () => {
+      await intoDocuments();
+      await mouse('right', 3);
+      await flush();
+      expect(leftPath()).toBe('/home/Documents');
+    });
+
+    describe('swipes', () => {
+      it('a swipe toward the left edge goes back, a new swipe the other way forward', async () => {
+        await intoDocuments();
+        await swipe(-20);
+        expect(leftPath()).toBe('/home');
+
+        // Lets the first gesture end; until then its momentum is swallowed.
+        await act(() => new Promise((r) => setTimeout(r, GESTURE_GAP_MS + 50)));
+        await swipe(20);
+        expect(leftPath()).toBe('/home/Documents');
+      });
+
+      it('does nothing with the setting off', async () => {
+        await intoDocuments();
+        act(() => useSettings.setState({ settings: { ...settings, swipeNavigation: false } }));
+        await swipe(-20);
+        expect(leftPath()).toBe('/home/Documents');
+      });
     });
   });
 

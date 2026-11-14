@@ -20,8 +20,8 @@ export function PaneHeader({ paneId, pathBarRef }: Props) {
   const pane = usePanes((s) => s.panes[paneId]);
   const noConnection = pane.connId === null;
   const atRoot = parentPath(pane.path) === pane.path;
-  const backTo = pane.history.back.at(-1);
-  const forwardTo = pane.history.forward.at(-1);
+  const backTo = pane.history.back.at(-1)?.path;
+  const forwardTo = pane.history.forward.at(-1)?.path;
 
   return (
     <div className={styles.header}>

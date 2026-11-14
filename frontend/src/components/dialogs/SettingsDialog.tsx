@@ -39,6 +39,19 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             />
             Show hidden files
           </label>
+          <div>
+            <label className={controls.checkbox}>
+              <input
+                type="checkbox"
+                checked={settings.swipeNavigation}
+                onChange={(e) => void save({ swipeNavigation: e.target.checked })}
+              />
+              Swipe to go back and forward
+            </label>
+            <p className={controls.hint}>
+              A two-finger sideways swipe on the trackpad over a pane moves through its history.
+            </p>
+          </div>
           {IS_MAC && (
             <div>
               <label className={controls.checkbox}>
