@@ -111,6 +111,7 @@ func (a *App) Services() []application.Service {
 		application.NewService(&FileService{app: a}),
 		application.NewService(&TransferService{app: a}),
 		application.NewService(&PromptService{app: a}),
+		application.NewServiceWithOptions(&PreviewService{app: a}, application.ServiceOptions{Route: PreviewRoute}),
 		application.NewService(&SettingsService{app: a}),
 		application.NewService(&VersionService{}),
 	}

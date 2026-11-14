@@ -412,25 +412,31 @@ func (r CopyRequest) normalize() (CopyRequest, error) {
 // one the caller meant, so they are refused rather than silently rewritten.
 func isCanonical(p string) bool { return p != "" && p == path.Clean(p) }
 
-// cleanPaths returns ps if every entry is a canonical, non-root path.
+// CheckPath accepts p only if it is a canonical, non-root path: the rule every source path follows.
+func CheckPath(p string) error {
+	switch {
+	case p == "":
+		return fmt.Errorf("%w: empty path", ErrInvalid)
+	case !isCanonical(p):
+		return fmt.Errorf("%w: %q is not a clean path", ErrInvalid, p)
+	case path.Dir(p) == p:
+		return fmt.Errorf("%w: %q is a root", ErrInvalid, p)
+	default:
+		return nil
+	}
+}
+
+// cleanPaths returns ps if every entry passes CheckPath.
 func cleanPaths(ps []string) ([]string, error) {
 	if len(ps) == 0 {
 		return nil, ErrNoSources
 	}
-	out := make([]string, len(ps))
-	for i, p := range ps {
-		if p == "" {
-			return nil, fmt.Errorf("%w: empty path", ErrInvalid)
+	for _, p := range ps {
+		if err := CheckPath(p); err != nil {
+			return nil, err
 		}
-		if !isCanonical(p) {
-			return nil, fmt.Errorf("%w: %q is not a clean path", ErrInvalid, p)
-		}
-		if path.Dir(p) == p {
-			return nil, fmt.Errorf("%w: %q is a root", ErrInvalid, p)
-		}
-		out[i] = p
 	}
-	return out, nil
+	return slices.Clone(ps), nil
 }
 
 // within reports whether p is dir or lies beneath it.
