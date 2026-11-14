@@ -20,8 +20,9 @@ export async function flow(name, fn, { engine = 'chromium' } = {}) {
     right: page.locator('[data-pane="right"]'),
     row: (pane, text) => pane.locator('[role="option"]', { hasText: text }).first(),
     step: (s) => console.log(`  ${name}: ${s}`),
-    shot: async (label) => {
-      await page.waitForTimeout(400); // let dialog transitions settle
+    /** `settle: false` captures at once, for state that lasts less than the usual 400 ms wait. */
+    shot: async (label, { settle = true } = {}) => {
+      if (settle) await page.waitForTimeout(400); // let dialog transitions settle
       await page.screenshot({ path: `/out/${name}-${String(++shotN).padStart(2, '0')}-${label}.png` });
     },
     goTo: async (pane, p) => {
