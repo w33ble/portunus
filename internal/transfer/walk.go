@@ -58,15 +58,35 @@ func pushReversed(stack []walkItem, found []walkItem) []walkItem {
 	return stack
 }
 
-// copyWalker expands a copy job depth-first. Directories are created and listed here, on
-// the producer goroutine, before any of their files are queued; file tasks go to the
-// scheduler (or the conflict gate) as they are found.
+// copyWalker expands a copy or move job depth-first. Directories are created and listed
+// here, on the producer goroutine, before any of their files are queued; file tasks go to
+// the scheduler (or the conflict gate) as they are found.
+//
+// A move walks the same way, and differs in three places: a task whose destination is free
+// on a single connection is renamed instead of copied, every task is linked to the directory
+// that holds it (see parent), and that directory stays pending until its contents are gone.
 type copyWalker struct {
 	e         *Engine
 	j         *job
 	ctx       context.Context
 	conflicts chan<- *task
 	stack     []walkItem
+	cur       *task // the directory being expanded; nil while walking the top-level sources
+}
+
+// parent is the directory task that new tasks hang from. Only a move needs it: it removes
+// the source directory once everything inside has moved.
+func (w *copyWalker) parent() *task {
+	if w.j.kind == KindMove {
+		return w.cur
+	}
+	return nil
+}
+
+// sameConn reports whether this is a move that never leaves its connection, so a rename can
+// stand in for a copy.
+func (w *copyWalker) sameConn() bool {
+	return w.j.kind == KindMove && w.j.srcConn == w.j.dstConn
 }
 
 // key is the name under which conflicts and duplicate sources are matched: folded to lower
@@ -91,6 +111,7 @@ func (w *copyWalker) run() {
 }
 
 func (w *copyWalker) root(sources []string) {
+	w.cur = nil
 	existing, err := w.loadDst(w.j.dstDir)
 	if err != nil {
 		w.failRoot(sources, fmt.Errorf("prepare destination %s: %w", w.j.dstDir, err))
@@ -106,6 +127,9 @@ func (w *copyWalker) root(sources []string) {
 		dst := path.Join(w.j.dstDir, name)
 		ent, err := w.j.src.Stat(w.ctx, src)
 		if err != nil {
+			if w.j.kind == KindMove && errors.Is(err, vfs.ErrNotExist) && w.e.alreadyFinished(w.j, dst) {
+				continue // moved by an earlier run of this job
+			}
 			w.fail(taskSource, src, dst, fmt.Errorf("stat %s: %w", src, err))
 			continue
 		}
@@ -139,9 +163,14 @@ func (w *copyWalker) failRoot(sources []string, err error) {
 
 func (w *copyWalker) dir(it walkItem) {
 	t := it.task
+	w.cur = t
 	w.e.beginInline(w.j, t)
 	found, err := w.expand(it)
 	w.stack = pushReversed(w.stack, found)
+	if w.j.kind == KindMove && err == nil {
+		w.e.endExpand(w.j, t)
+		return
+	}
 	w.e.endInline(w.j, t, err)
 }
 
@@ -206,6 +235,9 @@ func (w *copyWalker) entry(src string, ent vfs.Entry, dstDir string, existing ma
 	old, exists := existing[w.key(ent.Name)]
 	switch classify(ent) {
 	case classLinkedDir, classSpecial:
+		if !exists && w.tryRename(taskFile, src, dst, ent) {
+			break
+		}
 		w.skip(taskFile, src, dst)
 	case classDir:
 		w.dirEntry(src, dst, ent, old, exists, found)
@@ -220,9 +252,34 @@ func (w *copyWalker) dirEntry(src, dst string, ent, old vfs.Entry, exists bool, 
 		w.fail(taskDir, src, dst, errDstNotDir)
 		return
 	}
-	t := &task{kind: taskDir, src: src, dst: dst, ent: ent}
+	if !exists && w.tryRename(taskDir, src, dst, ent) {
+		return
+	}
+	t := &task{kind: taskDir, src: src, dst: dst, ent: ent, parent: w.parent()}
+	if w.j.kind == KindMove {
+		t.remaining = 1 // released once the directory is fully listed
+	}
 	w.e.register(w.j, t)
-	*found = append(*found, walkItem{task: t, listDst: exists})
+	// A rename that failed may have left something at dst, so look before writing into it.
+	*found = append(*found, walkItem{task: t, listDst: exists || w.sameConn()})
+}
+
+// tryRename moves src to dst with one Rename when the job stays on one connection and dst
+// is free. It records the item as done and reports true on success; any failure (S3
+// prefixes, another filesystem, a target that appeared) leaves src untouched and reports
+// false, and the item is then copied and deleted like a cross-connection move.
+func (w *copyWalker) tryRename(kind taskKind, src, dst string, ent vfs.Entry) bool {
+	if !w.sameConn() {
+		return false
+	}
+	if err := w.j.src.Rename(w.ctx, src, dst); err != nil {
+		w.e.log.DebugContext(w.ctx, "rename failed, falling back to copy", "job", w.j.id, "src", src, "dst", dst, "err", err)
+		return false
+	}
+	t := &task{kind: kind, src: src, dst: dst, ent: ent, parent: w.parent()}
+	w.e.register(w.j, t)
+	w.e.settle(w.j, t, StateDone, nil)
+	return true
 }
 
 type resolution int
@@ -246,15 +303,16 @@ func (w *copyWalker) resolution() resolution {
 }
 
 func (w *copyWalker) fileEntry(src, dst string, ent, old vfs.Entry, exists bool) error {
-	if w.e.alreadyFinished(w.j, dst) {
+	if w.j.kind == KindCopy && w.e.alreadyFinished(w.j, dst) {
 		return nil
 	}
 	if exists && old.IsDir {
 		w.fail(taskFile, src, dst, errDstIsDir)
 		return nil
 	}
-	t := &task{kind: taskFile, src: src, dst: dst, ent: ent, size: ent.Size}
+	t := &task{kind: taskFile, src: src, dst: dst, ent: ent, size: ent.Size, parent: w.parent()}
 	if !exists {
+		t.rename = w.sameConn()
 		w.e.register(w.j, t)
 		return w.deliver(w.e.enqueueReady(w.j, t))
 	}
@@ -285,13 +343,13 @@ func (w *copyWalker) deliver(ok bool) error {
 
 // fail and skip record a task that never reaches a worker.
 func (w *copyWalker) fail(kind taskKind, src, dst string, err error) {
-	t := &task{kind: kind, src: src, dst: dst, noRetry: kind != taskSource}
+	t := &task{kind: kind, src: src, dst: dst, noRetry: kind != taskSource, parent: w.parent()}
 	w.e.register(w.j, t)
 	w.e.settle(w.j, t, outcomeOf(w.j, err), err)
 }
 
 func (w *copyWalker) skip(kind taskKind, src, dst string) {
-	t := &task{kind: kind, src: src, dst: dst}
+	t := &task{kind: kind, src: src, dst: dst, parent: w.parent()}
 	w.e.register(w.j, t)
 	w.e.settle(w.j, t, StateSkipped, nil)
 }

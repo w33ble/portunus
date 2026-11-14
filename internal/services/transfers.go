@@ -2,7 +2,7 @@ package services
 
 import "github.com/w33ble/portunus/internal/transfer"
 
-// TransferService queues copies and deletes. Progress arrives as transfers:update events.
+// TransferService queues copies, moves and deletes. Progress arrives as transfers:update events.
 type TransferService struct {
 	app *App
 }
@@ -10,6 +10,13 @@ type TransferService struct {
 // Copy copies sources from one connection into dstDir on another (or the same) and returns the job ID.
 func (s *TransferService) Copy(req transfer.CopyRequest) (string, error) {
 	return s.app.engine.Copy(req)
+}
+
+// Move moves sources from one connection into dstDir on another (or the same) and returns
+// the job ID. A source is deleted only once its copy has committed; within one connection
+// it is renamed.
+func (s *TransferService) Move(req transfer.MoveRequest) (string, error) {
+	return s.app.engine.Move(req)
 }
 
 // Delete removes paths recursively as a job and returns the job ID.

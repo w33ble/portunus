@@ -7,9 +7,13 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"time"
 
 	"github.com/w33ble/portunus/internal/vfs"
 )
+
+// removeCopiedTimeout bounds deleting a source whose copy has already committed.
+const removeCopiedTimeout = 10 * time.Second
 
 // xfer owns the two ends of one file copy. Cancellation closes the reader and aborts the
 // writer from another goroutine, which is what stops backends that ignore ctx; the once
@@ -165,6 +169,48 @@ func (e *Engine) commit(ctx context.Context, x *xfer, t *task) error {
 	}
 	if err := x.w.Commit(); err != nil {
 		return fmt.Errorf("commit %s: %w", t.dst, err)
+	}
+	return nil
+}
+
+// moveFile moves one file. On a single connection with nothing at the destination it is a
+// Rename: instant, no data copied. Otherwise it is a copy, and the source is deleted only
+// after the copy has committed, so an error or cancellation leaves the file at the source,
+// the destination, or both.
+func (e *Engine) moveFile(j *job, t *task) error {
+	if t.rename {
+		err := j.src.Rename(j.ctx, t.src, t.dst)
+		switch {
+		case err == nil:
+			t.done.Add(t.size)
+			j.doneBytes.Add(t.size)
+			return nil
+		case j.ctx.Err() != nil:
+			return j.ctx.Err()
+		case errors.Is(err, vfs.ErrExist):
+			// Something appeared at dst after the walk looked. Copying would replace it unasked.
+			t.noRetry = true
+			return fmt.Errorf("rename %s: %w", t.src, err)
+		}
+		// S3 objects over 5 GiB, a different filesystem and the like: stream it instead.
+		// From here on dst may hold our own copy, so a retry must not try to rename again.
+		t.rename = false
+		e.log.DebugContext(j.ctx, "rename failed, falling back to copy", "job", j.id, "src", t.src, "dst", t.dst, "err", err)
+	}
+	if err := e.copyFile(j, t); err != nil {
+		return err
+	}
+	return e.removeCopied(j, t)
+}
+
+// removeCopied deletes the source of a file that has just been committed at the destination.
+// It ignores cancellation: stopping here would leave the file in both places, and Resume
+// would then ask about a conflict with itself.
+func (e *Engine) removeCopied(j *job, t *task) error {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(j.ctx), removeCopiedTimeout)
+	defer cancel()
+	if err := j.src.Remove(ctx, t.src); err != nil && !errors.Is(err, vfs.ErrNotExist) {
+		return fmt.Errorf("copied to %s, but removing the source failed: %w", t.dst, err)
 	}
 	return nil
 }
