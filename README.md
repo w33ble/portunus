@@ -6,7 +6,7 @@
 
 Dual-pane file transfer client for SFTP and S3. Built with [Wails v3](https://v3.wails.io) (Go backend, React + TypeScript frontend). macOS first, Linux supported.
 
-Status: MVP. It runs on macOS and Linux; there are no packaged releases yet. See [docs/mvp-plan.md](docs/mvp-plan.md).
+Status: MVP. It runs on macOS and Linux. Builds are on the [Releases](https://github.com/w33ble/portunus/releases) page.
 
 ## Features
 
@@ -19,6 +19,19 @@ Status: MVP. It runs on macOS and Linux; there are no packaged releases yet. See
 - S3: AWS shared profiles or access keys, custom endpoints and path-style addressing for S3-compatible services. Secrets go in the OS keychain.
 - Transfers: drag between panes, drop from Finder, or press F5. Directories copy recursively, with parallel transfers (4 total and 2 per connection by default, adjustable in the Transfers tab). Files are written to a temp name and renamed into place, so a failed or cancelled transfer leaves nothing half-written.
 - When a destination already exists, you choose overwrite, skip, or cancel, with an option to apply the choice to every conflict in that transfer.
+
+## Install
+
+Download the latest build from [Releases](https://github.com/w33ble/portunus/releases).
+
+- **macOS** (Apple silicon and Intel): open the `.dmg` and drag Portunus to Applications. The app isn't signed or notarized, so macOS quarantines it and **Open Anyway** in Privacy & Security isn't enough. Clear the quarantine flag once in Terminal, then open it as usual:
+
+  ```sh
+  xattr -dr com.apple.quarantine /Applications/portunus.app
+  ```
+
+- **Debian/Ubuntu**: `sudo apt install ./portunus_*.deb`. **Fedora/RHEL**: `sudo dnf install ./portunus-*.rpm`. Needs GTK 4 and WebKitGTK 6.0 (Ubuntu 24.04+, Debian 13+, Fedora 40+).
+- **Other Linux**: the `.tar.gz` contains the binary.
 
 ## Requirements
 
@@ -86,7 +99,7 @@ git tag v0.2.0 && git push origin v0.2.0
 
 `release.yml` runs CI and e2e, then builds:
 
-- macOS: a universal `.app` (arm64 + x86_64), as a `.zip` and a `.dmg`. Ad-hoc signed only, so users approve the first launch in System Settings.
+- macOS: a universal `.app` (arm64 + x86_64), as a `.zip` and a `.dmg`. Ad-hoc signed only, so users clear the quarantine flag before the first launch (see [Install](#install)).
 - Linux: `.deb`, `.rpm` and `.tar.gz` for amd64, plus arm64 when the repo is public (hosted arm64 runners are free only for public repos).
 - `THIRD_PARTY_NOTICES.md` (`build/release/third-party-notices.sh`), which is also bundled in the `.app` and the Linux packages, and `SHA256SUMS`.
 
