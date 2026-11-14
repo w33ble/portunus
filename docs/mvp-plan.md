@@ -25,6 +25,7 @@ Deviations from the design below, all deliberate:
 - The S3 writer's memory cap is per writer, not shared across concurrent transfers.
 - Copied directories get the destination's default mode; only file modes are preserved.
 - `PORTUNUS_SSH_CONFIG` overrides the ssh config file for listing and `ssh -G -F` (used by e2e).
+- The quick preview (Space) reads files through `PreviewService`, an `http.Handler` the asset server mounts at `/preview`, not a binding, so `<img>` and the PDF viewer load bytes directly and nothing binary goes through JSON.
 
 ## MVP scope
 

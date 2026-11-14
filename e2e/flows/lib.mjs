@@ -57,3 +57,57 @@ export function sameFile(a, b) {
 export function count(dir) {
   return existsSync(dir) ? readdirSync(dir).length : -1;
 }
+
+/** Opens the quick preview on `name` in `pane` (or moves it there) and returns the panel. */
+export async function openPreview({ page, row }, pane, name) {
+  const panel = page.locator('section[data-preview]');
+  await row(pane, name).click();
+  if (!(await panel.isVisible())) await page.keyboard.press('Space');
+  await panel.locator('h2', { hasText: name }).waitFor({ timeout: 15000 });
+  return panel;
+}
+
+/** Previews the hello.txt, pixel.png and doc.pdf fixtures in `pane`, then closes the preview. */
+export async function previewFixtures(ctx, pane, where) {
+  const { page, step, shot } = ctx;
+
+  step(`preview text on ${where}`);
+  let panel = await openPreview(ctx, pane, 'hello.txt');
+  await panel.locator('pre', { hasText: 'hello from portunus' }).waitFor({ timeout: 15000 });
+
+  step(`preview image on ${where}`);
+  panel = await openPreview(ctx, pane, 'pixel.png');
+  const width = await panel.locator('img').evaluate(async (img) => {
+    await img.decode();
+    return img.naturalWidth;
+  });
+  assert(width === 16, `pixel.png decoded ${width}px wide, want 16`);
+  await shot(`preview-image-${where}`);
+
+  step(`preview PDF on ${where}`);
+  const viewer = await page.evaluate(() => navigator.pdfViewerEnabled === true);
+  // The viewer's own GET; whether it renders is the browser's business (Playwright's WebKit
+  // build claims a viewer but leaves the frame blank).
+  const served = viewer
+    ? page.waitForResponse(
+        (r) => r.url().includes('/preview') && r.request().method() === 'GET',
+        { timeout: 15000 }
+      )
+    : null;
+  panel = await openPreview(ctx, pane, 'doc.pdf');
+  if (served) {
+    await panel.locator('iframe').waitFor({ timeout: 15000 });
+    const res = await served;
+    assert(
+      res.status() === 200 && res.headers()['content-type'] === 'application/pdf',
+      `PDF served as ${res.status()} ${res.headers()['content-type']}`
+    );
+  } else {
+    await panel.getByText('No preview available').waitFor({ timeout: 15000 });
+  }
+  step(`  PDF viewer ${viewer ? 'loaded' : 'unavailable in this browser, metadata only'}`);
+  await shot(`preview-pdf-${where}`);
+
+  await page.keyboard.press('Escape');
+  await panel.waitFor({ state: 'detached' });
+}

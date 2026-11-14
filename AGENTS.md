@@ -14,7 +14,7 @@ React (frontend/src) ──api/ wrappers──▶ generated bindings ──▶ i
                          vfs (localfs | sftpfs | s3fs) ◀── transfer engine, prompt, sshconn, profiles, settings
 ```
 
-- **Services stay thin** (`internal/services/app.go`): domain logic lives in `internal/{vfs,transfer,prompt,sshcfg,sshconn,profiles,settings,state}`. `main.go` injects an `Emit` closure that services use to push events.
+- **Services stay thin** (`internal/services/app.go`): domain logic lives in `internal/{vfs,transfer,preview,prompt,sshcfg,sshconn,profiles,settings,state}`. `main.go` injects an `Emit` closure that services use to push events.
 - **One `vfs.FS` contract** (`internal/vfs/vfs.go`) is the pivot for services, the engine and tests:
   - Paths are absolute and `/`-separated on every backend, Windows included. Use package `path`, never `filepath`.
   - Writers stage, then `Commit()` or `Abort()`. Commit refuses unless `Written() == opts.Size` (`ErrSizeMismatch`). SFTP stages to `.<name>.portunus-tmp` and commits with `posix-rename@openssh.com`.
@@ -22,6 +22,7 @@ React (frontend/src) ──api/ wrappers──▶ generated bindings ──▶ i
   - Copy with `WriterTo`/`ReaderFrom` or `io.CopyBuffer` (1 MiB). Plain `io.Copy` throttles SFTP badly.
 - **Connections** (`services/registry.go`): one live connection per target ID (`local`, `ssh:<alias|user@host:port>`, `s3:<profile>`). Dials are single-flight; a dropped transport redials once. Two panes on the same target share a `connId`. SFTP uses two sessions per host, one to browse and one to transfer.
 - **Listings are pulled, not pushed**: `FileService.List` returns the first page plus a cursor, and the frontend calls `ListNext` (`services/listing.go`, `frontend/src/api/listing.ts`). Cursors not pulled for 60 s are reaped. `stores/panes.ts` batches pages every 60 ms, drops stale `requestId`s, and on refresh keeps old entries in `listing.replacing` until the new listing completes.
+- **Previews are an HTTP route, not a binding**: `PreviewService` (`services/preview.go`) is an `http.Handler` mounted at `/preview` through `ServiceOptions.Route`, so `<img>` and `<iframe>` load bytes directly. `internal/preview` picks the kind from the name and sniffs text. The frontend (`api/preview.ts`, `components/preview/usePreview.ts`) aborts its fetch when the cursor moves; the canceled request context closes the backend reader. Space toggles it; `useUi.preview` names the source pane and the other `Pane` renders `hidden`.
 - **Transfer engine** (`internal/transfer`):
   - A job is one user action, walked lazily into tasks (`walk.go`).
   - `sched.go` takes global and per-connection permits together, so remote-to-remote copies can't deadlock.
@@ -87,7 +88,7 @@ mise run build           # cgo build -> bin/portunus
 - **Dialogs**: open with `useUi.getState().openDialog({ kind })`, and add the kind to the `DialogHost` switch. Every dialog renders through `Modal` (native `<dialog>` plus a manual Tab trap, because WKWebView skips buttons when macOS keyboard navigation is off).
 - **Styling**: one CSS Module per component, plus the shared `ui/controls.module.css`. Take every colour from the tokens in `styles.css` (light/dark via `prefers-color-scheme`). Buttons with white text use `--accent-fill`; `--accent` is for rings, icons and text. Global `:focus-visible` draws a box-shadow ring, so a component with its own focus cue overrides it.
 - **File list** (`components/pane`): rows are virtualized with TanStack Virtual at a fixed 22 px, with `role="listbox"`/`"option"`. Selection is pruned to visible entries, so filtered-out items drop out. The pane is a CSS size container: columns hide via `@container` below 440px and 320px.
-- **Keyboard**: pane-wide shortcuts (⌘L, ⌘R, ⌘⇧N, ⌘F, history) live in `Pane.tsx`; list keys (arrows, type-ahead, F2, F5, Delete, Tab) live in `useFileListKeys.ts`.
+- **Keyboard**: pane-wide shortcuts (⌘L, ⌘R, ⌘⇧N, ⌘F, history) live in `Pane.tsx`; list keys (arrows, type-ahead, Space, F2, F5, Delete, Tab) live in `useFileListKeys.ts`.
 - **`data-pane`**: it marks both the pane `<section>` and folder drop targets inside it. Select panes with `section[data-pane]`.
 
 **Process**

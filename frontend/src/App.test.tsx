@@ -10,7 +10,8 @@ import { usePanes } from './stores/panes';
 import { usePrompts } from './stores/prompts';
 import { useSettings } from './stores/settings';
 import { useTransfers } from './stores/transfers';
-import { entry, localConnection } from './stores/testApi';
+import { PREVIEW_DELAY_MS } from './components/preview/usePreview';
+import { deferred, entry, localConnection } from './stores/testApi';
 import { useUi } from './stores/ui';
 import { useConnections } from './stores/connections';
 
@@ -185,6 +186,20 @@ const namesOf = (selector: string) =>
   );
 const selectedNames = () => namesOf('[role=option][aria-selected="true"]');
 const shownNames = () => namesOf('[role=option]');
+
+const preview = () => host.querySelector<HTMLElement>('section[data-preview]');
+const previewBody = () => host.querySelector<HTMLElement>('[data-preview-body]');
+const rightPane = () => host.querySelector<HTMLElement>('section[data-pane="right"]');
+const settle = () =>
+  act(async () => {
+    await vi.advanceTimersByTimeAsync(PREVIEW_DELAY_MS);
+  });
+const clickRow = (name: string) =>
+  act(async () =>
+    [...host.querySelectorAll<HTMLElement>('[data-pane="left"] [role=option]')]
+      .find((r) => r.textContent?.includes(name))
+      ?.click()
+  );
 
 describe('App', () => {
   it('opens both panes on the local home and hides dotfiles', () => {
@@ -400,6 +415,104 @@ describe('App', () => {
       expect(api.transfers.copy).toHaveBeenCalledWith(
         expect.objectContaining({ srcConn: 'local', dstDir: '/home' })
       );
+    });
+  });
+
+  describe('quick preview', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.mocked(api.preview.load).mockResolvedValue({
+        kind: 'text',
+        text: 'hello from portunus',
+        bytes: 19,
+        truncated: false,
+      });
+      vi.mocked(api.files.summarize).mockResolvedValue({
+        dirs: 2,
+        files: 3,
+        size: 2048,
+        partial: false,
+      });
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it('Space shows the cursor file in place of the other pane, and Space closes it', async () => {
+      await clickRow('notes.txt');
+      await key(leftList(), { key: ' ' });
+      await settle();
+
+      expect(rightPane()?.hidden).toBe(true);
+      expect(preview()?.textContent).toContain('hello from portunus');
+      expect(api.preview.load).toHaveBeenCalledWith(
+        'local',
+        '/home/notes.txt',
+        expect.objectContaining({ signal: expect.any(AbortSignal) })
+      );
+
+      await key(leftList(), { key: ' ' });
+      expect(preview()).toBeNull();
+      expect(rightPane()?.hidden).toBe(false);
+    });
+
+    it('follows the cursor and aborts the load it leaves behind', async () => {
+      const pending = deferred<never>();
+      vi.mocked(api.files.summarize).mockReturnValue(pending.promise);
+      await clickRow('Documents');
+      await key(leftList(), { key: ' ' });
+      await settle();
+      const signal = vi.mocked(api.files.summarize).mock.calls[0]?.[2];
+      expect(signal?.aborted).toBe(false);
+
+      await key(leftList(), { key: 'ArrowDown' });
+      expect(signal?.aborted).toBe(true);
+      await settle();
+      expect(api.preview.load).toHaveBeenCalledWith('local', '/home/notes.txt', expect.anything());
+      expect(preview()?.textContent).toContain('hello from portunus');
+    });
+
+    it('only loads the entry the cursor settles on', async () => {
+      await clickRow('Documents');
+      await key(leftList(), { key: ' ' });
+      await key(leftList(), { key: 'ArrowDown' });
+      await settle();
+      expect(api.files.summarize).not.toHaveBeenCalled();
+      expect(api.preview.load).toHaveBeenCalledTimes(1);
+    });
+
+    it('summarizes a folder', async () => {
+      await clickRow('Documents');
+      await key(leftList(), { key: ' ' });
+      await settle();
+      expect(preview()?.textContent).toContain('5 items');
+      expect(preview()?.textContent).toContain('2 folders, 3 files');
+      expect(preview()?.textContent).toContain('2.0 KB in files here');
+    });
+
+    it('shows metadata only for a file too large to preview', async () => {
+      vi.mocked(api.preview.load).mockResolvedValue({ kind: 'none', reason: 'too_large' });
+      await clickRow('notes.txt');
+      await key(leftList(), { key: ' ' });
+      await settle();
+      expect(preview()?.textContent).toContain('File too large to preview (10 B)');
+      expect(preview()?.querySelector('dl')?.textContent).toContain('Modified');
+    });
+
+    it('Tab moves into the preview and Escape there closes it, keeping the selection', async () => {
+      await clickRow('notes.txt');
+      await key(leftList(), { key: ' ' });
+      await key(leftList(), { key: 'Tab' });
+      expect(document.activeElement).toBe(previewBody());
+
+      await key(previewBody(), { key: 'Escape' });
+      expect(preview()).toBeNull();
+      expect(document.activeElement).toBe(leftList());
+      expect(selectedNames()).toEqual(['notes.txt']);
+    });
+
+    it('keeps Space for type-ahead right after typed letters', async () => {
+      await key(leftList(), { key: 'n' });
+      await key(leftList(), { key: ' ' });
+      expect(preview()).toBeNull();
     });
   });
 });

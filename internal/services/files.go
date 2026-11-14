@@ -59,6 +59,50 @@ func (s *FileService) Stat(ctx context.Context, connID, p string) (vfs.Entry, er
 	return fs.Stat(ctx, p)
 }
 
+// summaryLimit caps how many entries Summarize counts; past it the summary is Partial.
+const summaryLimit = 10_000
+
+// DirSummary describes a directory's immediate contents for the preview.
+type DirSummary struct {
+	Dirs  int `json:"dirs"`
+	Files int `json:"files"`
+	// Size totals the immediate files; subdirectories aren't walked.
+	Size int64 `json:"size"`
+	// Partial is true when counting stopped at summaryLimit entries.
+	Partial bool `json:"partial"`
+}
+
+var errSummaryFull = errors.New("summary limit reached")
+
+// Summarize counts dir's immediate entries. Canceling the promise stops the listing.
+func (s *FileService) Summarize(ctx context.Context, connID, dir string) (DirSummary, error) {
+	fs, err := s.app.reg.FS(ctx, connID)
+	if err != nil {
+		return DirSummary{}, err
+	}
+
+	var sum DirSummary
+	err = fs.List(ctx, dir, func(page []vfs.Entry) error {
+		for _, e := range page {
+			if sum.Dirs+sum.Files == summaryLimit {
+				sum.Partial = true
+				return errSummaryFull
+			}
+			if e.IsDir {
+				sum.Dirs++
+			} else {
+				sum.Files++
+				sum.Size += e.Size
+			}
+		}
+		return nil
+	})
+	if err != nil && !errors.Is(err, errSummaryFull) {
+		return DirSummary{}, err
+	}
+	return sum, nil
+}
+
 // Mkdir creates name inside dir and returns the new directory's entry.
 func (s *FileService) Mkdir(ctx context.Context, connID, dir, name string) (vfs.Entry, error) {
 	if err := validName(name); err != nil {

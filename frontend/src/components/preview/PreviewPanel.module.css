@@ -1,0 +1,175 @@
+.panel {
+  container-type: inline-size;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 0;
+  background: var(--bg);
+}
+
+.panel[data-side='right'] {
+  border-left: 1px solid var(--border);
+}
+
+/* Matches the pane header it stands in for. */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 8px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-chrome-active);
+}
+
+.icon {
+  flex: none;
+  color: var(--text-secondary);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header button[aria-pressed='true'] {
+  background: var(--selection);
+}
+
+.body {
+  position: relative;
+  min-height: 0;
+  overflow: auto;
+  outline: none;
+}
+
+/* The global ring is an outer shadow; a scroll area that fills the panel needs it inside. */
+.body:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.message {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  margin: 0;
+  padding: 16px;
+  color: var(--text);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.muted {
+  color: var(--text-secondary);
+}
+
+.error {
+  color: var(--danger);
+}
+
+.notice {
+  position: sticky;
+  top: 0;
+  margin: 0;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--warning-bg);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.text {
+  margin: 0;
+  padding: 8px 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre;
+  tab-size: 4;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.wrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.image {
+  position: absolute;
+  inset: 0;
+  max-width: calc(100% - 24px);
+  max-height: calc(100% - 24px);
+  margin: auto;
+  object-fit: contain;
+}
+
+.pdf {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 100%;
+  padding: 16px;
+  text-align: center;
+}
+
+.summary p {
+  margin: 0;
+}
+
+.summaryIcon {
+  margin-bottom: 8px;
+  color: var(--accent);
+}
+
+.count {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.detail {
+  color: var(--text-secondary);
+}
+
+.meta {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px 12px;
+  margin: 0;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-chrome-active);
+  font-size: 12px;
+}
+
+.meta dt {
+  color: var(--text-secondary);
+}
+
+.meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.mono {
+  font-family: var(--mono);
+}

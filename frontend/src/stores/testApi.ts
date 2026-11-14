@@ -49,7 +49,8 @@ export function bindingError(kind: string, message: string): Error {
 /** Factory for vi.mock('../api'): only the wire boundary is faked. */
 export function createApiMock() {
   return {
-    files: { list: vi.fn(), mkdir: vi.fn(), rename: vi.fn() },
+    files: { list: vi.fn(), mkdir: vi.fn(), rename: vi.fn(), summarize: vi.fn() },
+    preview: { load: vi.fn() },
     connections: {
       list: vi.fn(),
       connect: vi.fn(),

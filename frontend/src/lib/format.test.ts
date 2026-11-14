@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { formatBytes, formatDateTime, formatEta, formatModified, formatSpeed } from './format';
+import {
+  formatBytes,
+  formatDateTime,
+  formatEta,
+  formatMode,
+  formatModified,
+  formatSpeed,
+} from './format';
 
 describe('formatBytes', () => {
   it('scales units', () => {
@@ -47,5 +54,17 @@ describe('formatModified', () => {
     expect(formatModified('0001-01-01T00:00:00Z', opts)).toBe('—');
     expect(formatModified('nope', opts)).toBe('—');
     expect(formatDateTime('0001-01-01T00:00:00Z')).toBe('—');
+  });
+});
+
+describe('formatMode', () => {
+  it('renders permission bits with the entry type', () => {
+    expect(formatMode(0o644, false, false)).toBe('-rw-r--r--');
+    // Go's fs.ModeDir is bit 31, past JS's int32 sign bit.
+    expect(formatMode(2 ** 31 + 0o755, true, false)).toBe('drwxr-xr-x');
+    expect(formatMode(0o777, false, true)).toBe('lrwxrwxrwx');
+  });
+  it('shows a dash where the backend has no permissions', () => {
+    expect(formatMode(0, false, false)).toBe('—');
   });
 });

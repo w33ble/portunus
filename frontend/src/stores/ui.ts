@@ -29,10 +29,15 @@ interface UiState {
   tab: Tab;
   activePane: PaneId;
   dialog: Dialog | null;
+  /** Pane whose cursor entry is previewed in place of the other pane; null when closed. */
+  preview: PaneId | null;
   setTab: (tab: Tab) => void;
   setActivePane: (id: PaneId) => void;
   openDialog: (dialog: Dialog) => void;
   closeDialog: () => void;
+  /** Space in a file list: opens the preview for `id`, or closes it. */
+  togglePreview: (id: PaneId) => void;
+  closePreview: () => void;
   showError: (title: string, error: AppError) => void;
 }
 
@@ -40,10 +45,13 @@ export const useUi = create<UiState>()((set) => ({
   tab: 'browser',
   activePane: 'left',
   dialog: null,
+  preview: null,
   setTab: (tab) => set({ tab }),
   setActivePane: (activePane) => set({ activePane }),
   openDialog: (dialog) => set({ dialog }),
   closeDialog: () => set({ dialog: null }),
+  togglePreview: (id) => set((s) => ({ preview: s.preview === id ? null : id })),
+  closePreview: () => set({ preview: null }),
   showError(title, error) {
     if (error.kind === 'canceled') return;
     if (error.kind === 'hostkey_mismatch') {

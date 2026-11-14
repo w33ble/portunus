@@ -10,8 +10,10 @@ import type { ConflictAnswer } from '../../bindings/github.com/w33ble/portunus/i
 import { Policy, TargetKind } from './enums';
 import { toAppError } from './errors';
 import { type ListBackend, type Listing, pullListing } from './listing';
+import { loadPreview } from './preview';
 import type {
   Connection,
+  DirSummary,
   Entry,
   Host,
   JobView,
@@ -32,6 +34,17 @@ function call<T>(promise: PromiseLike<T>): Promise<T> {
 }
 
 export type { Listing } from './listing';
+export type { NoPreviewReason, PreviewContent } from './preview';
+
+/** Like call(), and aborting `signal` cancels the in-flight request (Wails' CancellablePromise). */
+function callWithSignal<T>(
+  promise: PromiseLike<T> & { cancel(): unknown },
+  signal: AbortSignal
+): Promise<T> {
+  const cancel = () => void Promise.resolve(promise.cancel()).catch(() => undefined);
+  signal.addEventListener('abort', cancel, { once: true });
+  return call(promise).finally(() => signal.removeEventListener('abort', cancel));
+}
 
 const listBackend: ListBackend = {
   start: (connId, dir) => FileService.List(connId, dir),
@@ -47,6 +60,13 @@ export const files = {
     call(FileService.Mkdir(connId, dir, name)),
   rename: (connId: string, path: string, newName: string): Promise<Entry> =>
     call(FileService.Rename(connId, path, newName)),
+  /** Counts a directory's immediate entries for the preview. */
+  summarize: (connId: string, dir: string, signal: AbortSignal): Promise<DirSummary> =>
+    callWithSignal(FileService.Summarize(connId, dir), signal),
+};
+
+export const preview = {
+  load: loadPreview,
 };
 
 export const connections = {

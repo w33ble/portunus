@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import styles from './App.module.css';
 import { DialogHost } from './components/dialogs/DialogHost';
 import { Pane } from './components/pane/Pane';
+import { PreviewPanel } from './components/preview/PreviewPanel';
 import { StatusBar } from './components/shell/StatusBar';
 import { Titlebar } from './components/shell/Titlebar';
 import { TransfersView } from './components/transfers/TransfersView';
@@ -38,6 +39,7 @@ function useGlobalShortcuts() {
 
 export default function App() {
   const tab = useUi((s) => s.tab);
+  const preview = useUi((s) => s.preview);
   useEffect(() => startBackend(), []);
   useGlobalShortcuts();
 
@@ -46,8 +48,10 @@ export default function App() {
       <Titlebar />
       <main className={styles.main}>
         <div className={styles.panes} hidden={tab !== 'browser'}>
-          <Pane paneId="left" />
-          <Pane paneId="right" />
+          {preview === 'right' && <PreviewPanel sourcePane="right" />}
+          <Pane paneId="left" hidden={preview === 'right'} />
+          <Pane paneId="right" hidden={preview === 'left'} />
+          {preview === 'left' && <PreviewPanel sourcePane="left" />}
         </div>
         <div className={styles.transfers} hidden={tab !== 'transfers'}>
           <TransfersView />
