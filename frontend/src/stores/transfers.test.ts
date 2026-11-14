@@ -71,6 +71,25 @@ describe('useTransfers', () => {
     expect(refreshWhere).toHaveBeenCalledTimes(1);
   });
 
+  it('refreshes both ends when a move finishes', () => {
+    const move = { kind: JobKind.KindMove, srcConn: 'local', dstConn: 'ssh:h', dstDir: '/srv' };
+    useTransfers.getState().apply({ jobs: [job('m', move)], removed: null });
+    useTransfers
+      .getState()
+      .apply({ jobs: [job('m', { ...move, state: State.StateDone })], removed: null });
+    expect(refreshWhere).toHaveBeenCalledWith('local');
+    expect(refreshWhere).toHaveBeenCalledWith('ssh:h', '/srv');
+  });
+
+  it('refreshes the connection once when a move stays on it', () => {
+    const move = { kind: JobKind.KindMove, srcConn: 'local', dstConn: 'local', dstDir: '/srv' };
+    useTransfers.getState().apply({ jobs: [job('m', move)], removed: null });
+    useTransfers
+      .getState()
+      .apply({ jobs: [job('m', { ...move, state: State.StateCanceled })], removed: null });
+    expect(refreshWhere.mock.calls).toEqual([['local']]);
+  });
+
   it('refreshes the source connection when a delete finishes', () => {
     useTransfers.getState().apply({
       jobs: [job('d', { kind: JobKind.KindDelete, srcConn: 'local', dstConn: '' })],

@@ -15,12 +15,12 @@ import (
 	"github.com/w33ble/portunus/internal/vfs"
 )
 
-var errContentsRemain = errors.New("not removed: some contents could not be deleted")
+var errContentsRemain = errors.New("not removed: some of its contents remain")
 
 type taskKind int
 
 const (
-	taskFile   taskKind = iota // copy a file, or delete a file or link
+	taskFile   taskKind = iota // copy or move a file, or delete a file or link
 	taskDir                    // create a directory and expand it, or remove it after its contents
 	taskSource                 // a top-level source that could not be examined
 )
@@ -34,18 +34,20 @@ type task struct {
 	size      int64
 	dstEnt    *vfs.Entry // existing destination file that conflicts
 	overwrite bool       // conflict resolved in favor of overwriting
+	rename    bool       // move on one connection with nothing at dst: try Rename before copying
 	noRetry   bool       // failed for a reason Retry cannot change
 	state     State
 	err       string
 	done      atomic.Int64
 
-	// Delete jobs remove a directory only after its contents.
-	parent      *task
-	remaining   int  // unfinished children plus one token until the directory is fully listed
-	childFailed bool // a child failed, so the directory cannot be removed
-	childFinal  bool // ...and one of those failures cannot be retried
-	enqueued    bool
-	expanded    bool // contents fully enumerated
+	// Delete and move jobs remove a directory only after its contents.
+	parent       *task
+	remaining    int  // unfinished children plus one token until the directory is fully listed
+	childFailed  bool // a child failed, so the directory cannot be removed
+	childFinal   bool // ...and one of those failures cannot be retried
+	childSkipped bool // move: a child stayed at the source, so the directory does too
+	enqueued     bool
+	expanded     bool // contents fully enumerated
 }
 
 func (t *task) needsAsk() bool { return t.dstEnt != nil && !t.overwrite }
@@ -298,16 +300,20 @@ func (e *Engine) settle(j *job, t *task, s State, err error) {
 	e.settleLocked(j, t, s, err)
 }
 
-// recordFinishedLocked remembers files (and, for deletes, directories) that are done or
-// skipped, so Resume can count them without walking them again.
+// recordFinishedLocked remembers files (and, for deletes and moves, directories) that are
+// done or skipped, so Resume can count them without walking them again.
 func (j *job) recordFinishedLocked(t *task, s State) {
 	if s != StateDone && s != StateSkipped {
 		return
 	}
 	key := t.dst
-	if j.kind == KindDelete {
+	switch {
+	case j.kind == KindDelete:
 		key = t.src
-	} else if t.kind != taskFile {
+	case j.kind == KindMove && s == StateSkipped:
+		return // a skipped conflict is asked again on resume, and keeps its parent at the source
+	case j.kind == KindMove && t.kind == taskDir:
+	case t.kind != taskFile:
 		return
 	}
 	if key == "" {
@@ -325,16 +331,20 @@ func (e *Engine) depDoneLocked(j *job, t *task) {
 	if p == nil {
 		return
 	}
-	if t.state == StateFailed {
+	switch t.state {
+	case StateFailed:
 		p.childFailed = true
 		p.childFinal = p.childFinal || t.noRetry
+	case StateSkipped:
+		p.childSkipped = p.childSkipped || j.kind == KindMove
+	case StateQueued, StateRunning, StateWaiting, StateDone, StateCanceled:
 	}
 	p.remaining--
 	e.dirReadyLocked(j, p)
 }
 
-// dirReadyLocked queues a directory delete once its contents are gone, or fails it when
-// some contents could not be deleted.
+// dirReadyLocked queues a directory removal once its contents are gone, fails it when some
+// contents remain, and, for a move, skips it while a child stayed at the source.
 func (e *Engine) dirReadyLocked(j *job, p *task) {
 	if p.remaining > 0 || p.enqueued || p.state != StateQueued || j.ctx.Err() != nil {
 		return
@@ -342,6 +352,10 @@ func (e *Engine) dirReadyLocked(j *job, p *task) {
 	if p.childFailed {
 		p.noRetry = p.childFinal
 		e.settleLocked(j, p, StateFailed, errContentsRemain)
+		return
+	}
+	if p.childSkipped {
+		e.settleLocked(j, p, StateSkipped, nil)
 		return
 	}
 	p.enqueued = true

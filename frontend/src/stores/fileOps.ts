@@ -1,7 +1,7 @@
 import * as api from '../api';
 import { toAppError } from '../api/errors';
 import type { Entry } from '../api/types';
-import { type DragPayload, isSameDirectoryDrop } from '../lib/dragData';
+import { type DragPayload, type TransferOp, isSameDirectoryDrop } from '../lib/dragData';
 import { filterEntries } from '../lib/match';
 import { selectOnly } from '../lib/selection';
 import { visibleEntries } from '../lib/sort';
@@ -23,20 +23,30 @@ export function selectedEntries(id: PaneId): Entry[] {
   return visible.filter((e) => pane.selection.selected.has(e.path));
 }
 
-async function startCopy(req: {
+interface TransferRequest {
   srcConn: string;
   sources: string[];
   dstConn: string;
   dstDir: string;
-}): Promise<void> {
+}
+
+async function startTransfer(op: TransferOp, req: TransferRequest): Promise<void> {
   try {
-    await api.transfers.copy(req);
+    await (op === 'move' ? api.transfers.move(req) : api.transfers.copy(req));
   } catch (e) {
-    useUi.getState().showError('Couldn’t start the copy', toAppError(e));
+    useUi.getState().showError(`Couldn’t start the ${op}`, toAppError(e));
   }
 }
 
 export function copyToOtherPane(id: PaneId): void {
+  transferToOtherPane(id, 'copy');
+}
+
+export function moveToOtherPane(id: PaneId): void {
+  transferToOtherPane(id, 'move');
+}
+
+function transferToOtherPane(id: PaneId, op: TransferOp): void {
   const source = usePanes.getState().panes[id];
   const dest = usePanes.getState().panes[otherPane(id)];
   const entries = selectedEntries(id);
@@ -50,7 +60,7 @@ export function copyToOtherPane(id: PaneId): void {
   ) {
     return;
   }
-  void startCopy({
+  void startTransfer(op, {
     srcConn: source.connId,
     sources,
     dstConn: dest.connId,
@@ -59,11 +69,16 @@ export function copyToOtherPane(id: PaneId): void {
 }
 
 /** In-app drop: `dstDir` is the pane's directory or a directory row inside it. */
-export function dropOnPane(id: PaneId, payload: DragPayload, dstDir: string): void {
+export function dropOnPane(
+  id: PaneId,
+  payload: DragPayload,
+  dstDir: string,
+  op: TransferOp = 'copy'
+): void {
   const dest = usePanes.getState().panes[id];
   if (dest.connId === null) return;
   if (isSameDirectoryDrop(payload, { connId: dest.connId, dir: dstDir })) return;
-  void startCopy({
+  void startTransfer(op, {
     srcConn: payload.connId,
     sources: payload.paths,
     dstConn: dest.connId,
@@ -76,7 +91,7 @@ export function dropOnPane(id: PaneId, payload: DragPayload, dstDir: string): vo
 export function dropFromOs(id: PaneId, paths: readonly string[], dir = ''): void {
   const dest = usePanes.getState().panes[id];
   if (dest.connId === null || paths.length === 0) return;
-  void startCopy({
+  void startTransfer('copy', {
     srcConn: LOCAL_CONN,
     sources: [...paths],
     dstConn: dest.connId,

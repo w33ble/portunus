@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { decodeDragPayload, encodeDragPayload, isSameDirectoryDrop } from './dragData';
+import {
+  decodeDragPayload,
+  dragOperation,
+  encodeDragPayload,
+  isSameDirectoryDrop,
+} from './dragData';
 
 describe('drag payload', () => {
   it('round-trips', () => {
@@ -16,6 +21,20 @@ describe('drag payload', () => {
     '{"connId":"x","paths":[1]}',
   ])('rejects %j', (raw) => {
     expect(decodeDragPayload(raw)).toBeNull();
+  });
+});
+
+describe('dragOperation', () => {
+  const none = { metaKey: false, shiftKey: false };
+  it.each([
+    ['mac', none, 'copy'],
+    ['mac', { metaKey: true, shiftKey: false }, 'move'],
+    ['mac', { metaKey: false, shiftKey: true }, 'copy'],
+    ['linux', none, 'copy'],
+    ['linux', { metaKey: false, shiftKey: true }, 'move'],
+    ['linux', { metaKey: true, shiftKey: false }, 'copy'],
+  ] as const)('on %s with %j is a %s', (platform, mods, expected) => {
+    expect(dragOperation(mods, platform === 'mac')).toBe(expected);
   });
 });
 

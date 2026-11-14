@@ -20,7 +20,8 @@ Status: MVP. It runs on macOS and Linux. Builds are on the [Releases](https://gi
 - On macOS, keys stored with `ssh-add --apple-use-keychain` are loaded into the agent before any passphrase prompt.
 - S3: AWS shared profiles or access keys, custom endpoints and path-style addressing for S3-compatible services. Secrets go in the OS keychain.
 - Transfers: drag between panes, drop from Finder, or press F5. Directories copy recursively, with parallel transfers (4 total and 2 per connection by default, adjustable in the Transfers tab). Files are written to a temp name and renamed into place, so a failed or cancelled transfer leaves nothing half-written.
-- When a destination already exists, you choose overwrite, skip, or cancel, with an option to apply the choice to every conflict in that transfer.
+- Move: F6 or "Move to other pane" moves the selection to the other pane's folder. Holding Cmd (macOS) or Shift (Linux) while dragging moves instead of copies, onto a pane or onto a folder name. Within one connection a move is a rename: instant, and nothing is copied. Between connections, and for S3 folders, each file is copied first and deleted from the source only after the copy is in place. A folder is removed once everything in it has moved, so a canceled, failed or skipped move leaves every unmoved item where it was.
+- When a destination already exists, you choose overwrite, skip, or cancel, with an option to apply the choice to every conflict in that transfer. A skipped item stays at its source when moving.
 
 ## Install
 
@@ -73,7 +74,7 @@ Go lint and tests run with the `purego` build tag. That's Wails' CGO-free backen
 
 - Go unit and integration tests run against real servers. SFTP tests start an unprivileged OpenSSH `sshd`. S3 tests start RustFS (an S3-compatible server) in Docker and skip when Docker isn't available. A shared conformance suite (`internal/vfs/vfstest`) runs against every backend.
 - Frontend tests use vitest (`pnpm --dir frontend test`).
-- `mise run e2e` builds the app in Wails server mode (`-tags server`), starts sshd and RustFS with throwaway fixtures, and drives the real UI with Playwright in Docker: connect, trust a host key, copy with conflicts, drag, delete, rename, an S3 round trip, quick previews of text, highlighted code, an image and a PDF on local, SFTP and S3, and back/forward by swipe, mouse button and keyboard. Screenshots land in `e2e/out/`.
+- `mise run e2e` builds the app in Wails server mode (`-tags server`), starts sshd and RustFS with throwaway fixtures, and drives the real UI with Playwright in Docker: connect, trust a host key, copy with conflicts, drag, move between local, SFTP and S3 and within one connection, delete, rename, an S3 round trip, quick previews of text, highlighted code, an image and a PDF on local, SFTP and S3, and back/forward by swipe, mouse button and keyboard. Screenshots land in `e2e/out/`.
 - The same run opens every dialog, and a highlighted Go, diff and Dockerfile preview, in light and dark and checks contrast: axe-core's `color-contrast` rule for enabled text, plus a custom pass for what axe skips (disabled controls at least 3:1, placeholders 4.5:1, icon buttons 3:1). The measurements land in `e2e/out/contrast.json`. Run it alone with `E2E_FLOWS=contrast mise run e2e`; flows are the names in `e2e/flows/`.
 
 ### CI

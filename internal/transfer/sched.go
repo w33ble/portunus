@@ -90,20 +90,25 @@ func (e *Engine) execute(j *job, t *task) error {
 	switch j.kind {
 	case KindCopy:
 		return e.copyFile(j, t)
+	case KindMove:
+		if t.kind == taskDir {
+			return e.remove(j, t) // contents are gone; this is the emptied source directory
+		}
+		return e.moveFile(j, t)
 	case KindDelete:
 		return e.remove(j, t)
 	}
 	return fmt.Errorf("transfer: unknown job kind %q", j.kind)
 }
 
-// startRunLocked launches the producer (and, for ask-policy copies, the conflict gate)
+// startRunLocked launches the producer (and, for ask-policy copies and moves, the conflict gate)
 // for one run of j: its first, or a retry. Tasks in requeue go back to the scheduler
 // before items are walked.
 func (e *Engine) startRunLocked(j *job, items []walkItem, requeue []*task) {
 	j.walking = true
 	j.producers++
 	var conflicts chan *task
-	if j.kind == KindCopy && j.policy == PolicyAsk {
+	if (j.kind == KindCopy || j.kind == KindMove) && j.policy == PolicyAsk {
 		conflicts = make(chan *task, conflictQueueCap)
 		j.producers++
 		e.wg.Go(func() { e.runGate(j, conflicts) })
@@ -130,7 +135,7 @@ func (e *Engine) produce(j *job, items []walkItem, requeue []*task, conflicts ch
 		}
 	}
 	switch j.kind {
-	case KindCopy:
+	case KindCopy, KindMove:
 		w := &copyWalker{e: e, j: j, ctx: j.ctx, conflicts: conflicts, stack: items}
 		w.run()
 	case KindDelete:
@@ -193,6 +198,17 @@ func (e *Engine) endInline(j *job, t *task, err error) {
 	defer e.mu.Unlock()
 	t.expanded = err == nil
 	e.settleLocked(j, t, outcomeOf(j, err), err)
+}
+
+// endExpand puts a move directory back in the queue once it is listed. It has to wait for
+// its contents to move before the source directory can be removed.
+func (e *Engine) endExpand(j *job, t *task) {
+	e.mu.Lock()
+	t.state = StateQueued
+	delete(j.active, t)
+	e.touch(j)
+	e.mu.Unlock()
+	e.expanded(j, t)
 }
 
 // firstSourceKnown records whether the first source is a directory, for the title.

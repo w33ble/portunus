@@ -70,6 +70,7 @@ type fakeFS struct {
 	opens      map[string]int
 	creates    map[string]int
 	removed    []string
+	renames    []string
 	commits    int
 	aborts     int
 	misuse     []string
@@ -660,9 +661,27 @@ func (f *fakeFS) Rename(ctx context.Context, from, to string) error {
 	if _, exists := f.nodes[to]; exists {
 		return fmt.Errorf("fake rename %s: %w", to, vfs.ErrExist)
 	}
+	if parent, ok := f.nodes[path.Dir(to)]; !ok || !parent.dir {
+		return notExist("rename", path.Dir(to))
+	}
 	f.nodes[to] = n
 	delete(f.nodes, from)
+	if n.dir {
+		for q, child := range f.nodes {
+			if rest, ok := strings.CutPrefix(q, from+"/"); ok {
+				f.nodes[to+"/"+rest] = child
+				delete(f.nodes, q)
+			}
+		}
+	}
+	f.renames = append(f.renames, from+" -> "+to)
 	return nil
+}
+
+func (f *fakeFS) renamedPaths() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return slices.Clone(f.renames)
 }
 
 func (f *fakeFS) CaseInsensitive() bool { return f.caseInsensitive }

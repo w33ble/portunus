@@ -24,6 +24,7 @@ Deviations from the design below, all deliberate:
 - `sftpfs.List` reads the whole directory (pkg/sftp has no streaming readdir), then pages it to the UI.
 - The S3 writer's memory cap is per writer, not shared across concurrent transfers.
 - Copied directories get the destination's default mode; only file modes are preserved.
+- Moves (F6, modifier-drag) are transfer jobs. On one connection they `Rename`; anything else, including overwriting an existing file and S3 prefixes, copies then deletes each source after its copy commits.
 - `PORTUNUS_SSH_CONFIG` overrides the ssh config file for listing and `ssh -G -F` (used by e2e).
 - The quick preview (Space) reads files through `PreviewService`, an `http.Handler` the asset server mounts at `/preview`, not a binding, so `<img>` and the PDF viewer load bytes directly and nothing binary goes through JSON.
 

@@ -1,4 +1,4 @@
-// Package transfer runs copy and delete jobs between vfs filesystems.
+// Package transfer runs copy, move and delete jobs between vfs filesystems.
 //
 // A job is one user action. Directories expand lazily on a producer goroutine into
 // tasks (one per file or directory); a scheduler starts tasks under a global limit plus
@@ -37,8 +37,8 @@ var (
 	ErrNotRetryable = errors.New("transfer: job has no failed tasks to retry")
 	ErrNotResumable = errors.New("transfer: only canceled jobs can be resumed")
 	ErrNoSources    = errors.New("transfer: no sources")
-	ErrIntoSelf     = errors.New("transfer: cannot copy a directory into itself")
-	ErrOntoSelf     = errors.New("transfer: cannot copy an item onto itself")
+	ErrIntoSelf     = errors.New("transfer: cannot put a directory inside itself")
+	ErrOntoSelf     = errors.New("transfer: cannot put an item onto itself")
 	// ErrInvalid wraps requests with empty or root paths, or an unknown policy.
 	ErrInvalid = errors.New("transfer: invalid request")
 )
@@ -91,17 +91,29 @@ type CopyRequest struct {
 	Policy  Policy   `json:"policy"` // empty means ask
 }
 
+// MoveRequest moves Sources (absolute paths on SrcConn) into DstDir on DstConn. A source
+// disappears only after it has arrived. Policy decides what happens to a file that already
+// exists in DstDir; whatever is skipped stays at the source.
+type MoveRequest struct {
+	SrcConn string   `json:"srcConn"`
+	Sources []string `json:"sources"`
+	DstConn string   `json:"dstConn"`
+	DstDir  string   `json:"dstDir"`
+	Policy  Policy   `json:"policy"` // empty means ask
+}
+
 // DeleteRequest recursively deletes Paths on Conn. Symlinks are removed, never followed.
 type DeleteRequest struct {
 	Conn  string   `json:"conn"`
 	Paths []string `json:"paths"`
 }
 
-// JobKind is "copy" or "delete".
+// JobKind is "copy", "move" or "delete".
 type JobKind string
 
 const (
 	KindCopy   JobKind = "copy"
+	KindMove   JobKind = "move"
 	KindDelete JobKind = "delete"
 )
 
@@ -244,6 +256,29 @@ func (e *Engine) Copy(req CopyRequest) (string, error) {
 	j := e.newJobLocked(KindCopy, req.SrcConn, req.DstConn, req.DstDir, req.Policy, req.Sources)
 	j.src, j.dst = src, dst
 	e.startRunLocked(j, []walkItem{{root: true, sources: req.Sources}}, nil)
+	return j.id, nil
+}
+
+// Move validates req and starts a move job, returning its ID. Within one connection an
+// item is renamed when nothing is at its destination; everything else is copied and then
+// deleted from the source, file by file, so an interrupted move never loses an item.
+func (e *Engine) Move(req MoveRequest) (string, error) {
+	norm, err := CopyRequest(req).normalize()
+	if err != nil {
+		return "", err
+	}
+	src, dst, err := e.resolvePair(norm.SrcConn, norm.DstConn)
+	if err != nil {
+		return "", err
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.closed {
+		return "", ErrClosed
+	}
+	j := e.newJobLocked(KindMove, norm.SrcConn, norm.DstConn, norm.DstDir, norm.Policy, norm.Sources)
+	j.src, j.dst = src, dst
+	e.startRunLocked(j, []walkItem{{root: true, sources: norm.Sources}}, nil)
 	return j.id, nil
 }
 

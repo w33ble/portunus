@@ -32,6 +32,7 @@ function Route({ job }: { job: JobView }) {
   if (job.kind === JobKind.KindDelete) return <span>Deleting from {src}</span>;
   return (
     <span>
+      {job.kind === JobKind.KindMove && 'Moving '}
       {src}
       <Icon name="arrowRight" size={12} className={styles.arrow} />
       {dst}:{job.dstDir}
@@ -111,7 +112,7 @@ export function JobRow({ job }: { job: JobView }) {
 
       <div className={styles.stats}>
         <span>
-          {job.kind === JobKind.KindCopy && (
+          {job.kind !== JobKind.KindDelete && (
             <>
               {formatBytes(job.doneBytes)} of {formatBytes(job.totalBytes)}
               {job.walking && '+'} ·{' '}
