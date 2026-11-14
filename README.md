@@ -11,7 +11,7 @@ Status: MVP. It runs on macOS and Linux. Builds are on the [Releases](https://gi
 ## Features
 
 - Two panes, each on any connection: local disk, an SSH host, or an S3 bucket.
-- Back and forward through each pane's folder history: the header arrows, ⌘[ / ⌘] (Alt+← / Alt+→ on Linux), the mouse's back and forward buttons, or a two-finger sideways swipe on the trackpad (Settings can turn swipes off). Going back reselects what was selected in that folder. Buttons and swipes act on the pane under the pointer, keys on the active pane. Changing a pane's connection starts a new history.
+- Back and forward through each pane's folder history: the header arrows, ⌘[ / ⌘] (Alt+← / Alt+→ on Linux), the mouse's back and forward buttons, or a trackpad swipe. On macOS the swipe follows "Swipe between pages" in System Settings → Trackpad (two fingers, three fingers, or both); on Linux it's a two-finger sideways swipe. Settings can turn swipes off. Going back reselects what was selected in that folder. Buttons and swipes act on the pane under the pointer, keys on the active pane. Changing a pane's connection starts a new history.
 - Type to find: in a file list, typing a name jumps to the first entry that starts with it, as in Finder. ⌘F (Ctrl+F) opens a filter that narrows the list with fuzzy, case- and accent-insensitive matching, best matches first. Typing `/` or `~` starts a path.
 - Quick preview: Space shows the entry under the cursor in place of the other pane, on any connection. Text and code show the first 1 MB, images up to 20 MB, and PDFs up to 50 MB when the webview has a PDF viewer. HTML shows as text. Folders show how many items they hold and the total size of their files. Binary and oversized files show metadata only. The preview follows the arrow keys and reads only the entry the cursor stops on. Space or Esc closes it.
 - SSH hosts come from `~/.ssh/config`, including `Include` and `Match`. Settings are resolved by `ssh -G`, so behavior matches the `ssh` command.
@@ -131,6 +131,7 @@ main.go                  Wails bootstrap, file-drop forwarding
 internal/services        Wails-bound services, connection registry, error mapping
 internal/transfer        transfer engine: jobs, scheduling, conflicts, progress
 internal/preview         quick preview: type detection, size limits, text truncation
+internal/swipe           macOS swipe gestures (AppKit event monitor) and the "Swipe between pages" setting
 internal/vfs             filesystem contract + conformance suite
 internal/vfs/localfs     local disk
 internal/vfs/sftpfs      SFTP (pkg/sftp)
