@@ -36,6 +36,12 @@ export function Pane({ paneId }: { paneId: PaneId }) {
     } else if (key === 'n' && event.shiftKey) {
       event.preventDefault();
       requestNewFolder(paneId);
+    } else if (key === 'f') {
+      event.preventDefault();
+      const field = event.currentTarget.querySelector<HTMLInputElement>('[data-filter-input]');
+      if (!field) usePanes.getState().openFilter(paneId);
+      field?.focus();
+      field?.select();
     }
   };
 
@@ -52,7 +58,7 @@ export function Pane({ paneId }: { paneId: PaneId }) {
     >
       <PaneHeader paneId={paneId} pathBarRef={pathBar} />
       <div className={styles.list}>
-        <FileList paneId={paneId} />
+        <FileList paneId={paneId} onEditPath={(prefill) => pathBar.current?.edit(prefill)} />
         <PaneBanner paneId={paneId} />
       </div>
     </section>

@@ -162,6 +162,30 @@ const documentsRow = () =>
     r.textContent?.includes('Documents')
   );
 
+const leftList = () => host.querySelector<HTMLElement>('[data-pane="left"] [data-filelist]');
+const key = (el: Element | null, init: KeyboardEventInit) =>
+  act(async () => {
+    el?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init }));
+  });
+const filterField = () =>
+  host.querySelector<HTMLInputElement>('[data-pane="left"] input[aria-label="Filter"]');
+
+/** Sets an input's value the way typing does, so React's onChange fires. */
+async function typeInto(input: HTMLInputElement | null, value: string) {
+  await act(async () => {
+    if (!input) return;
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
+
+const namesOf = (selector: string) =>
+  [...host.querySelectorAll(`[data-pane="left"] ${selector} [title]`)].map((r) =>
+    r.getAttribute('title')
+  );
+const selectedNames = () => namesOf('[role=option][aria-selected="true"]');
+const shownNames = () => namesOf('[role=option]');
+
 describe('App', () => {
   it('opens both panes on the local home and hides dotfiles', () => {
     expect(rowNames('left')[0]).toContain('Documents');
@@ -280,6 +304,60 @@ describe('App', () => {
       sources: ['/home/notes.txt'],
       dstConn: 'local',
       dstDir: '/elsewhere',
+    });
+  });
+
+  describe('type to find', () => {
+    it('jumps to and selects the first entry starting with the typed letters', async () => {
+      await key(leftList(), { key: 'n' });
+      expect(selectedNames()).toEqual(['notes.txt']);
+      await key(leftList(), { key: 'D' });
+      expect(selectedNames()).toEqual(['notes.txt']);
+    });
+
+    it('narrows the list with ⌘F and restores it on Esc', async () => {
+      await key(leftList(), { key: 'f', metaKey: true });
+      await typeInto(filterField(), 'note');
+      expect(shownNames()).toEqual(['notes.txt']);
+      expect(host.querySelector('[data-pane="left"] mark')?.textContent).toBe('note');
+
+      await typeInto(filterField(), 'zzz');
+      expect(shownNames()).toEqual([]);
+      expect(host.querySelector('[data-pane="left"]')?.textContent).toContain(
+        'No matches for “zzz”'
+      );
+
+      await key(filterField(), { key: 'Escape' });
+      expect(filterField()).toBeNull();
+      expect(shownNames()).toEqual(['Documents', 'notes.txt']);
+    });
+
+    it('acts only on entries the filter leaves visible', async () => {
+      vi.mocked(api.transfers.remove).mockResolvedValue('job');
+      await key(leftList(), { key: 'a', ctrlKey: true });
+      await key(leftList(), { key: 'f', ctrlKey: true });
+      await typeInto(filterField(), 'doc');
+      await key(leftList(), { key: 'Delete' });
+      const confirm = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(
+        (b) => b.textContent === 'Delete'
+      );
+      await act(async () => confirm?.click());
+      expect(api.transfers.remove).toHaveBeenCalledWith('local', ['/home/Documents']);
+    });
+
+    it('Enter in the filter moves to the list on the best match', async () => {
+      await key(leftList(), { key: 'f', metaKey: true });
+      await typeInto(filterField(), 'not');
+      await key(filterField(), { key: 'Enter' });
+      expect(selectedNames()).toEqual(['notes.txt']);
+      expect(document.activeElement).toBe(leftList());
+    });
+
+    it('starts path entry when "/" is typed in the list', async () => {
+      await key(leftList(), { key: '/' });
+      expect(
+        host.querySelector<HTMLInputElement>('[data-pane="left"] input[aria-label="Path"]')?.value
+      ).toBe('/');
     });
   });
 

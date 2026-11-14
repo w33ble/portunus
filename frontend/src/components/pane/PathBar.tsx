@@ -7,7 +7,8 @@ function scrollToEnd(el: HTMLDivElement | null): void {
 }
 
 export interface PathBarHandle {
-  edit: () => void;
+  /** Starts editing: selects the current path, or starts from `prefill` with the caret after it. */
+  edit: (prefill?: string) => void;
 }
 
 interface Props {
@@ -22,16 +23,21 @@ export function PathBar({ path, disabled, onNavigate, ref }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(path);
   const input = useRef<HTMLInputElement>(null);
+  const prefilled = useRef(false);
 
   useImperativeHandle(ref, () => ({
-    edit() {
-      setDraft(path);
+    edit(prefill) {
+      prefilled.current = prefill !== undefined;
+      setDraft(prefill ?? path);
       setEditing(true);
     },
   }));
 
   useEffect(() => {
-    if (editing) input.current?.select();
+    const el = input.current;
+    if (!editing || !el) return;
+    if (prefilled.current) el.setSelectionRange(el.value.length, el.value.length);
+    else el.select();
   }, [editing]);
 
   if (editing) {
@@ -88,6 +94,7 @@ export function PathBar({ path, disabled, onNavigate, ref }: Props) {
           tabIndex={-1}
           disabled={disabled}
           onClick={() => {
+            prefilled.current = false;
             setDraft(path);
             setEditing(true);
           }}

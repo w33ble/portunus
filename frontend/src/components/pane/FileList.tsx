@@ -3,6 +3,7 @@ import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } fr
 import type { Entry } from '../../api/types';
 import { ENTRIES_MIME, encodeDragPayload } from '../../lib/dragData';
 import { shownEntries } from '../../lib/listing';
+import { EMPTY_TYPE_AHEAD, TYPE_AHEAD_RESET_MS, filterEntries } from '../../lib/match';
 import { clickSelect, pruneSelection, selectOnly } from '../../lib/selection';
 import { IS_MAC } from '../../lib/platform';
 import { visibleEntries } from '../../lib/sort';
@@ -21,6 +22,7 @@ import { useUi } from '../../stores/ui';
 import { ColumnHeader } from './ColumnHeader';
 import { ContextMenu, type MenuItem } from './ContextMenu';
 import { FileRow } from './FileRow';
+import { FilterBar } from './FilterBar';
 import styles from './FileList.module.css';
 import { useFileListKeys } from './useFileListKeys';
 import { useListDrop } from './useListDrop';
@@ -35,18 +37,28 @@ interface MenuState {
 
 const MOD = IS_MAC ? '⌘' : 'Ctrl+';
 
-export function FileList({ paneId }: { paneId: PaneId }) {
+interface Props {
+  paneId: PaneId;
+  /** Opens the pane's path editor with `prefill` typed in. */
+  onEditPath: (prefill: string) => void;
+}
+
+export function FileList({ paneId, onEditPath }: Props) {
   const pane = usePanes((s) => s.panes[paneId]);
   const showHidden = useSettings(selectShowHidden);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const typeAhead = useRef(EMPTY_TYPE_AHEAD);
+  const [typed, setTyped] = useState('');
   const [menu, setMenu] = useState<MenuState | null>(null);
   const drop = useListDrop(paneId, pane.path);
 
   const shown = shownEntries(pane.listing);
-  const visible = useMemo(
+  const unfiltered = useMemo(
     () => visibleEntries(shown, showHidden, pane.sort),
     [shown, showHidden, pane.sort]
   );
+  const query = pane.filter ?? '';
+  const visible = useMemo(() => filterEntries(unfiltered, query), [unfiltered, query]);
   const { selection } = pane;
 
   // Keyboard shortcuts work from launch: the active pane's list starts focused.
@@ -54,7 +66,14 @@ export function FileList({ paneId }: { paneId: PaneId }) {
     if (useUi.getState().activePane === paneId) scrollerRef.current?.focus({ preventScroll: true });
   }, [paneId]);
 
-  // Drop selections that scrolled out of existence (refresh, delete, hidden toggled).
+  // The typed-prefix label disappears when type-ahead resets.
+  useEffect(() => {
+    if (typed === '') return;
+    const timer = setTimeout(() => setTyped(''), TYPE_AHEAD_RESET_MS);
+    return () => clearTimeout(timer);
+  }, [typed]);
+
+  // Drop selections that left the list (refresh, delete, hidden toggled, filtered out).
   useEffect(() => {
     const pruned = pruneSelection(
       selection,
@@ -86,7 +105,16 @@ export function FileList({ paneId }: { paneId: PaneId }) {
     1,
     Math.floor(((scrollerRef.current?.clientHeight ?? 400) - HEADER_HEIGHT) / ROW_HEIGHT) - 1
   );
-  const onKeyDown = useFileListKeys({ paneId, visible, selection, pageRows, scrollerRef });
+  const onKeyDown = useFileListKeys({
+    paneId,
+    visible,
+    selection,
+    pageRows,
+    filtering: pane.filter !== null,
+    typeAhead,
+    onTyped: setTyped,
+    onEditPath,
+  });
 
   const paths = useMemo(() => visible.map((e) => e.path), [visible]);
 
@@ -192,12 +220,27 @@ export function FileList({ paneId }: { paneId: PaneId }) {
   const loading = pane.status.kind === 'loading' || pane.status.kind === 'connecting';
   const items = virtualizer.getVirtualItems();
 
+  const leaveFilter = (pickBest: boolean) => {
+    const [best] = visible;
+    if (pickBest && best) usePanes.getState().setSelection(paneId, selectOnly(best.path));
+    scrollerRef.current?.focus({ preventScroll: true });
+  };
+
   return (
     <div
       className={styles.root}
       data-drop={drop.target?.kind === 'list' ? 'list' : 'none'}
       {...drop.listProps}
     >
+      {pane.filter !== null && (
+        <FilterBar
+          paneId={paneId}
+          query={pane.filter}
+          matches={visible.length}
+          total={unfiltered.length}
+          onLeave={leaveFilter}
+        />
+      )}
       <div
         ref={scrollerRef}
         className={styles.scroller}
@@ -234,6 +277,7 @@ export function FileList({ paneId }: { paneId: PaneId }) {
                 top={item.start - HEADER_HEIGHT}
                 selected={selection.selected.has(entry.path)}
                 cursor={selection.cursor === entry.path}
+                query={query}
                 dropTarget={drop.target?.kind === 'row' && drop.target.path === entry.path}
                 onClick={onClick}
                 onOpen={onOpen}
@@ -247,9 +291,16 @@ export function FileList({ paneId }: { paneId: PaneId }) {
           })}
         </div>
         {visible.length === 0 && !loading && (
-          <div className={styles.empty}>This folder is empty</div>
+          <div className={styles.empty}>
+            {query.trim() === '' ? 'This folder is empty' : `No matches for “${query}”`}
+          </div>
         )}
       </div>
+      {typed !== '' && (
+        <div className={styles.typed} aria-live="polite">
+          {typed}
+        </div>
+      )}
       {menu && (
         <ContextMenu x={menu.x} y={menu.y} items={menuItems()} onClose={() => setMenu(null)} />
       )}

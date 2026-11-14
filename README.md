@@ -11,6 +11,7 @@ Status: MVP. It runs on macOS and Linux; there are no packaged releases yet. See
 ## Features
 
 - Two panes, each on any connection: local disk, an SSH host, or an S3 bucket.
+- Type to find: in a file list, typing a name jumps to the first entry that starts with it, as in Finder. ⌘F (Ctrl+F) opens a filter that narrows the list with fuzzy, case- and accent-insensitive matching, best matches first. Typing `/` or `~` starts a path.
 - SSH hosts come from `~/.ssh/config`, including `Include` and `Match`. Settings are resolved by `ssh -G`, so behavior matches the `ssh` command.
 - Authentication through ssh-agent, `IdentityAgent` (1Password, Secretive), and key files (passphrase prompted only when needed), then keyboard-interactive and password. `ProxyJump` works; `ProxyCommand` doesn't yet.
 - Host keys are checked against `known_hosts`. Unknown keys get a trust prompt and are saved to `~/.ssh/known_hosts`, or to the app's own file if that isn't writable. A changed key always blocks the connection.

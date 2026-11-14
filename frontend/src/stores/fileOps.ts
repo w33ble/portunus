@@ -2,6 +2,7 @@ import * as api from '../api';
 import { toAppError } from '../api/errors';
 import type { Entry } from '../api/types';
 import { type DragPayload, isSameDirectoryDrop } from '../lib/dragData';
+import { filterEntries } from '../lib/match';
 import { selectOnly } from '../lib/selection';
 import { visibleEntries } from '../lib/sort';
 import { type PaneId, otherPane } from './paneTypes';
@@ -11,14 +12,13 @@ import { useUi } from './ui';
 
 export const LOCAL_CONN = 'local';
 
-/** Selected entries that are still listed and visible, in display order. */
+/** Selected entries that are still listed, visible and not filtered out, in display order. */
 export function selectedEntries(id: PaneId): Entry[] {
   const pane = usePanes.getState().panes[id];
   const showHidden = selectShowHidden(useSettings.getState());
-  const visible = visibleEntries(
-    pane.listing.replacing ?? pane.listing.entries,
-    showHidden,
-    pane.sort
+  const visible = filterEntries(
+    visibleEntries(pane.listing.replacing ?? pane.listing.entries, showHidden, pane.sort),
+    pane.filter ?? ''
   );
   return visible.filter((e) => pane.selection.selected.has(e.path));
 }
