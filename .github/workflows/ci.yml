@@ -4,6 +4,9 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Weekly on main so new advisories and module updates surface between PRs.
+  schedule:
+    - cron: '0 14 * * 1'
   # The release workflow runs CI as a gate before building artifacts.
   workflow_call:
 
@@ -49,6 +52,25 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - run: mise run lint:gohawk
+
+  # The update list is informational and lands in the job summary; govulncheck fails the job.
+  deps:
+    name: Vulnerabilities and module updates
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Module updates
+        run: |
+          {
+            echo '### Go module updates'
+            echo
+            echo '```'
+            mise run --quiet deps:outdated
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - run: mise run lint:vuln
 
   # The shipped cgo build; check/test only compile the purego backend.
   # Linux only: macOS builds are verified locally (macOS runner minutes are scarce on the free tier).
