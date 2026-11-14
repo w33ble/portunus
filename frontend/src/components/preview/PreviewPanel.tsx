@@ -9,6 +9,7 @@ import { useUi } from '../../stores/ui';
 import { Icon } from '../ui/Icon';
 import controls from '../ui/controls.module.css';
 import styles from './PreviewPanel.module.css';
+import { useHighlighted } from './useHighlighted';
 import { type Loaded, usePreview } from './usePreview';
 
 function cursorEntry(pane: PaneState): Entry | null {
@@ -124,7 +125,7 @@ function Content({ content, entry, wrap }: { content: Loaded; entry: Entry; wrap
               Showing the first {formatBytes(content.bytes)} of {formatBytes(entry.size)}
             </p>
           )}
-          <pre className={wrap ? `${styles.text} ${styles.wrap}` : styles.text}>{content.text}</pre>
+          <Text content={content} name={entry.name} wrap={wrap} />
         </>
       );
     case 'image':
@@ -146,6 +147,28 @@ function Content({ content, entry, wrap }: { content: Loaded; entry: Entry; wrap
       return unreachable;
     }
   }
+}
+
+function Text({
+  content,
+  name,
+  wrap,
+}: {
+  content: Extract<Loaded, { kind: 'text' }>;
+  name: string;
+  wrap: boolean;
+}) {
+  const html = useHighlighted(name, content.text, content.bytes);
+  return (
+    <pre className={wrap ? `${styles.text} ${styles.wrap}` : styles.text}>
+      {html === null ? (
+        content.text
+      ) : (
+        // highlight.js output: it escapes the file's text, which is never set as markup itself.
+        <code dangerouslySetInnerHTML={{ __html: html }} />
+      )}
+    </pre>
+  );
 }
 
 function ImagePreview({ blob, name }: { blob: Blob; name: string }) {

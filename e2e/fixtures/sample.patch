@@ -1,0 +1,13 @@
+diff --git a/greet.go b/greet.go
+index 3b18e51..a1c4f0d 100644
+--- a/greet.go
++++ b/greet.go
+@@ -12,7 +12,7 @@ type Greeter struct {
+ const maxNames = 16
+ 
+ func (g *Greeter) Greet() []string {
+-	if len(g.Names) == 0 || g.Names == nil {
++	if len(g.Names) == 0 {
+ 		return nil
+ 	}
+ 	out := make([]string, 0, maxNames)

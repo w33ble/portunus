@@ -32,7 +32,7 @@ await flow('s3', async (ctx) => {
   step('upload a file and a tree');
   await row(left, 'random.bin').click();
   await row(left, 'photos').click({ modifiers: ['Control'] });
-  for (const name of ['hello.txt', 'pixel.png', 'doc.pdf']) {
+  for (const name of ['hello.txt', 'pixel.png', 'doc.pdf', 'sample.go']) {
     await row(left, name).click({ modifiers: ['Control'] });
   }
   await page.keyboard.press('F5');

@@ -23,6 +23,7 @@ React (frontend/src) ──api/ wrappers──▶ generated bindings ──▶ i
 - **Connections** (`services/registry.go`): one live connection per target ID (`local`, `ssh:<alias|user@host:port>`, `s3:<profile>`). Dials are single-flight; a dropped transport redials once. Two panes on the same target share a `connId`. SFTP uses two sessions per host, one to browse and one to transfer.
 - **Listings are pulled, not pushed**: `FileService.List` returns the first page plus a cursor, and the frontend calls `ListNext` (`services/listing.go`, `frontend/src/api/listing.ts`). Cursors not pulled for 60 s are reaped. `stores/panes.ts` batches pages every 60 ms, drops stale `requestId`s, and on refresh keeps old entries in `listing.replacing` until the new listing completes.
 - **Previews are an HTTP route, not a binding**: `PreviewService` (`services/preview.go`) is an `http.Handler` mounted at `/preview` through `ServiceOptions.Route`, so `<img>` and `<iframe>` load bytes directly. `internal/preview` picks the kind from the name and sniffs text. The frontend (`api/preview.ts`, `components/preview/usePreview.ts`) aborts its fetch when the cursor moves; the canceled request context closes the backend reader. Space toggles it; `useUi.preview` names the source pane and the other `Pane` renders `hidden`.
+- **Syntax highlighting** is frontend-only and lazy: `lib/syntax.ts` is the pure language choice (file name, then extension, then a shebang; never content detection; plain above `HIGHLIGHT_LIMIT_BYTES`). `components/preview/highlighter.ts` dynamic-imports highlight.js core and one grammar per language, so each is its own Vite chunk. `useHighlighted` shows plain text first and swaps in markup only if it still belongs to the same text. Only highlight.js output is set as HTML. To add a language, extend `LANGUAGES` and the tables in `syntax.ts` and add its `import()` to `GRAMMARS`.
 - **Transfer engine** (`internal/transfer`):
   - A job is one user action, walked lazily into tasks (`walk.go`).
   - `sched.go` takes global and per-connection permits together, so remote-to-remote copies can't deadlock.
@@ -45,7 +46,7 @@ React (frontend/src) ──api/ wrappers──▶ generated bindings ──▶ i
 | `internal/testutil/` | `Unavailable` skip helper, `sshdtest` (real/in-process sshd, agent, proxy) |
 | `frontend/src/api/` | The only importer of `frontend/bindings`; wraps calls, errors, events |
 | `frontend/src/stores/` | zustand stores (`panes`, `connections`, `transfers`, `prompts`, `settings`, `ui`) and action modules (`fileOps.ts`) |
-| `frontend/src/lib/` | Pure helpers (selection, sort, history, listing, match/type-ahead, paths, tabStops) |
+| `frontend/src/lib/` | Pure helpers (selection, sort, history, listing, match/type-ahead, paths, tabStops, syntax) |
 | `frontend/src/components/{pane,dialogs,shell,transfers,ui}` | UI; `ui/Modal.tsx` and `ui/controls.module.css` are shared |
 | `e2e/` | Playwright flows against a server-mode build, real sshd and RustFS (Docker) |
 | `build/` | Wails Taskfiles, platform metadata (Info.plist, nfpm), icons, release scripts |
@@ -86,7 +87,7 @@ mise run build           # cgo build -> bin/portunus
 - **Formatting and lint**: oxfmt (100 columns, single quotes, trailing commas `es5`); oxlint runs only the correctness and suspicious categories.
 - **Stores**: components read with selectors (or `useShallow`). Event handlers and action functions read `useStore.getState()` to avoid stale closures. Reset a store with `setState(getInitialState(), true)`.
 - **Dialogs**: open with `useUi.getState().openDialog({ kind })`, and add the kind to the `DialogHost` switch. Every dialog renders through `Modal` (native `<dialog>` plus a manual Tab trap, because WKWebView skips buttons when macOS keyboard navigation is off).
-- **Styling**: one CSS Module per component, plus the shared `ui/controls.module.css`. Take every colour from the tokens in `styles.css` (light/dark via `prefers-color-scheme`). Buttons with white text use `--accent-fill`; `--accent` is for rings, icons and text. Global `:focus-visible` draws a box-shadow ring, so a component with its own focus cue overrides it.
+- **Styling**: one CSS Module per component, plus the shared `ui/controls.module.css`. Take every colour from the tokens in `styles.css` (light/dark via `prefers-color-scheme`); code colours are the `--syntax-*` tokens, mapped to `.hljs-*` classes in `PreviewPanel.module.css` with `:global`. Buttons with white text use `--accent-fill`; `--accent` is for rings, icons and text. Global `:focus-visible` draws a box-shadow ring, so a component with its own focus cue overrides it.
 - **File list** (`components/pane`): rows are virtualized with TanStack Virtual at a fixed 22 px, with `role="listbox"`/`"option"`. Selection is pruned to visible entries, so filtered-out items drop out. The pane is a CSS size container: columns hide via `@container` below 440px and 320px.
 - **Keyboard**: pane-wide shortcuts (⌘L, ⌘R, ⌘⇧N, ⌘F, history) live in `Pane.tsx`; list keys (arrows, type-ahead, Space, F2, F5, Delete, Tab) live in `useFileListKeys.ts`.
 - **History gestures**: mouse back/forward (`button` 3/4) are handled in `Pane.tsx`. Swipes follow the macOS "Swipe between pages" setting:
@@ -146,5 +147,5 @@ mise run build           # cgo build -> bin/portunus
 - **e2e** (`e2e/flows/*.mjs`):
   - **Writing a flow**: call `flow(name, fn, { engine: 'webkit' | 'chromium' })` from `lib.mjs`. To add one, create the file and add its name to the `E2E_FLOWS` default in `e2e/run.sh`.
   - **Order matters**: flows share fixtures and app state. `contrast` must run before `s3`, because it checks the empty S3-profiles state.
-  - **Contrast**: `contrast.mjs`/`a11y.mjs` run axe `color-contrast` on every dialog in light and dark, plus custom floors (disabled 3:1, placeholder 4.5:1, icons 3:1). New dialogs or colours have to pass it.
+  - **Contrast**: `contrast.mjs`/`a11y.mjs` run axe `color-contrast` on every dialog and on highlighted previews in light and dark, plus custom floors (disabled 3:1, placeholder 4.5:1, icons 3:1). New dialogs or colours have to pass it.
 - **What good tests look like**: they assert observable behaviour, and a fix comes with a test that fails without it. There's no coverage target. CI runs `check`, `race`, `gohawk` and a cgo build on every PR; e2e runs only after merge to main.

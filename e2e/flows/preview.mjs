@@ -18,6 +18,32 @@ await flow(
     await panel.locator('h2', { hasText: 'pixel.png' }).waitFor();
     await panel.locator('img').waitFor();
 
+    step('a Dockerfile is highlighted by name, a diff by extension');
+    panel = await openPreview(ctx, left, 'Dockerfile');
+    await panel.locator('pre .hljs-keyword', { hasText: 'FROM' }).first().waitFor({ timeout: 15000 });
+    panel = await openPreview(ctx, left, 'sample.patch');
+    await panel.locator('pre .hljs-addition').first().waitFor({ timeout: 15000 });
+    await panel.locator('pre .hljs-deletion').first().waitFor();
+    await shot('diff');
+
+    step('Wrap still toggles on highlighted code');
+    panel = await openPreview(ctx, left, 'sample.go');
+    await panel.locator('pre .hljs-keyword').first().waitFor({ timeout: 15000 });
+    const pre = panel.locator('pre');
+    const whiteSpace = () => pre.evaluate((el) => getComputedStyle(el).whiteSpace);
+    assert((await whiteSpace()) === 'pre-wrap', 'wrapped by default');
+    await panel.getByRole('button', { name: 'Wrap' }).click();
+    assert((await whiteSpace()) === 'pre', 'Wrap off');
+    await panel.getByRole('button', { name: 'Wrap' }).click();
+
+    step('moving off code before it is highlighted never leaves its markup on the next file');
+    await row(left, 'sample.go').click();
+    await row(left, 'hello.txt').click();
+    await panel.locator('h2', { hasText: 'hello.txt' }).waitFor();
+    await panel.locator('pre', { hasText: 'hello from portunus' }).waitFor({ timeout: 15000 });
+    await page.waitForTimeout(500);
+    assert((await panel.locator('pre [class*="hljs"]').count()) === 0, 'plain file has no markup');
+
     step('binary file shows metadata only');
     panel = await openPreview(ctx, left, 'random.bin');
     await panel.getByText('No preview available').waitFor({ timeout: 15000 });

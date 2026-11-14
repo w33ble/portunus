@@ -68,13 +68,20 @@ export async function openPreview({ page, row }, pane, name) {
   return panel;
 }
 
-/** Previews the hello.txt, pixel.png and doc.pdf fixtures in `pane`, then closes the preview. */
+/** Previews the hello.txt, sample.go, pixel.png and doc.pdf fixtures in `pane`, then closes the preview. */
 export async function previewFixtures(ctx, pane, where) {
   const { page, step, shot } = ctx;
 
   step(`preview text on ${where}`);
   let panel = await openPreview(ctx, pane, 'hello.txt');
   await panel.locator('pre', { hasText: 'hello from portunus' }).waitFor({ timeout: 15000 });
+  assert((await panel.locator('pre [class*="hljs"]').count()) === 0, 'plain text stays unhighlighted');
+
+  step(`preview highlighted code on ${where}`);
+  panel = await openPreview(ctx, pane, 'sample.go');
+  await panel.locator('pre .hljs-keyword', { hasText: 'package' }).first().waitFor({ timeout: 15000 });
+  await panel.locator('pre .hljs-string').first().waitFor();
+  await shot(`preview-code-${where}`);
 
   step(`preview image on ${where}`);
   panel = await openPreview(ctx, pane, 'pixel.png');
