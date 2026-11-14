@@ -1,9 +1,10 @@
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
-import { flow, assert, sameFile, count, E2E_DIR, HOME } from './lib.mjs';
+import { flow, assert, sameFile, count, previewFixtures, E2E_DIR, HOME } from './lib.mjs';
 
 const REMOTE = `${E2E_DIR}/remote`;
 
-await flow('sftp', async ({ page, left, right, row, step, shot, goTo }) => {
+await flow('sftp', async (ctx) => {
+  const { page, left, right, row, step, shot, goTo } = ctx;
   await row(left, 'Documents').dblclick();
   await row(left, 'hello.txt').waitFor();
 
@@ -29,6 +30,8 @@ await flow('sftp', async ({ page, left, right, row, step, shot, goTo }) => {
   await row(left, 'hello.txt').click();
   await row(left, 'random.bin').click({ modifiers: ['Control'] });
   await row(left, 'photos').click({ modifiers: ['Control'] });
+  await row(left, 'pixel.png').click({ modifiers: ['Control'] });
+  await row(left, 'doc.pdf').click({ modifiers: ['Control'] });
   await page.keyboard.press('F5');
   await page.getByRole('button', { name: /overwrite/i }).waitFor({ timeout: 15000 });
   await shot('conflict');
@@ -43,6 +46,9 @@ await flow('sftp', async ({ page, left, right, row, step, shot, goTo }) => {
   assert(count(`${REMOTE}/photos/2026`) === 12, '12 photos copied');
   assert(existsSync(`${REMOTE}/photos/empty`), 'empty dir recreated');
   assert(!readdirSync(REMOTE).some((f) => f.endsWith('.portunus-tmp')), 'no temp files left');
+
+  await row(right, 'doc.pdf').waitFor({ timeout: 15000 });
+  await previewFixtures(ctx, right, 'sftp');
 
   step('drag remote → local, then delete it');
   await row(right, 'remote-only.txt').dragTo(left.locator('[data-filelist]'));

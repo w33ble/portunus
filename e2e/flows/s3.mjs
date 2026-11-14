@@ -1,6 +1,7 @@
-import { flow, assert, sameFile, HOME } from './lib.mjs';
+import { flow, assert, sameFile, previewFixtures, HOME } from './lib.mjs';
 
-await flow('s3', async ({ page, left, right, row, step, shot, goTo }) => {
+await flow('s3', async (ctx) => {
+  const { page, left, right, row, step, shot, goTo } = ctx;
   await goTo(left, `${HOME}/Documents`);
   await row(left, 'random.bin').waitFor();
 
@@ -31,9 +32,15 @@ await flow('s3', async ({ page, left, right, row, step, shot, goTo }) => {
   step('upload a file and a tree');
   await row(left, 'random.bin').click();
   await row(left, 'photos').click({ modifiers: ['Control'] });
+  for (const name of ['hello.txt', 'pixel.png', 'doc.pdf']) {
+    await row(left, name).click({ modifiers: ['Control'] });
+  }
   await page.keyboard.press('F5');
   await row(right, 'random.bin').waitFor({ timeout: 20000 });
   await row(right, 'photos').waitFor({ timeout: 20000 });
+  await row(right, 'doc.pdf').waitFor({ timeout: 20000 });
+
+  await previewFixtures(ctx, right, 's3');
 
   step('download back and compare');
   await left.getByLabel('New folder').click();
