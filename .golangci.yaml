@@ -16,7 +16,6 @@ linters:
 
     # Security
     - gosec        # Insecure patterns in your code
-    # - govulncheck  # CVEs in dependencies
 
     # High-value additions
     - errcheck

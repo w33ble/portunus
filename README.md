@@ -37,7 +37,7 @@ Download the latest build from [Releases](https://github.com/w33ble/portunus/rel
 
 ## Requirements
 
-Tooling is pinned in `mise.toml` (Go, Node, pnpm, wails3 CLI, golangci-lint, gohawk):
+Tooling is pinned in `mise.toml` (Go, Node, pnpm, wails3 CLI, golangci-lint, gohawk, govulncheck):
 
 ```sh
 mise install
@@ -57,6 +57,8 @@ mise run package      # .app/.dmg on macOS, deb/rpm on Linux
 mise run check        # lint + typecheck + Go and frontend tests + format check
 mise run test:race    # Go tests under the race detector (needs a C compiler; CI always runs it)
 mise run lint:gohawk  # gohawk static analysis: goroutine, lock, and resource-lifetime bugs
+mise run lint:vuln    # govulncheck: known vulnerabilities in Go code the app calls
+mise run deps:outdated  # available updates for Go modules compiled into the app
 mise run e2e          # end-to-end smoke (Linux, needs Docker and /usr/sbin/sshd)
 mise run fmt          # format Go and frontend
 mise run bindings     # regenerate frontend/bindings from Go services
@@ -80,7 +82,7 @@ Go lint and tests run with the `purego` build tag. That's Wails' CGO-free backen
 
 GitHub Actions (`.github/workflows`):
 
-- `ci.yml` runs on every pull request and every push to `main`: `mise run check`, the race detector, gohawk, and a native cgo build on Ubuntu (GTK4/WebKitGTK 6). macOS builds aren't in CI; they're checked locally.
+- `ci.yml` runs on every pull request, every push to `main`, and weekly: `mise run check`, the race detector, gohawk, govulncheck, and a native cgo build on Ubuntu (GTK4/WebKitGTK 6). The govulncheck job also writes `mise run deps:outdated` to its job summary. macOS builds aren't in CI; they're checked locally.
 - `e2e.yml` runs the end-to-end suite on pushes to `main` and on manual dispatch. Screenshots are uploaded as an artifact.
 - `release.yml` cuts releases (see below). Both `ci.yml` and `e2e.yml` are reusable (`workflow_call`), and the release requires both to pass.
 
