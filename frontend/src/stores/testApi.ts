@@ -70,6 +70,7 @@ export function createApiMock() {
     transfers: {
       jobs: vi.fn(),
       copy: vi.fn(),
+      move: vi.fn(),
       remove: vi.fn(),
       cancel: vi.fn(),
       retry: vi.fn(),

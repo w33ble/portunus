@@ -102,6 +102,12 @@ export const transfers = {
     dstConn: string;
     dstDir: string;
   }): Promise<string> => call(TransferService.Copy({ ...req, policy: Policy.PolicyAsk })),
+  move: (req: {
+    srcConn: string;
+    sources: string[];
+    dstConn: string;
+    dstDir: string;
+  }): Promise<string> => call(TransferService.Move({ ...req, policy: Policy.PolicyAsk })),
   remove: (conn: string, paths: string[]): Promise<string> =>
     call(TransferService.Delete({ conn, paths })),
   cancel: (jobId: string): Promise<void> => call(TransferService.Cancel(jobId)),

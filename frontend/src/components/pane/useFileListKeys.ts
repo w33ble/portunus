@@ -2,7 +2,13 @@ import type { KeyboardEvent, RefObject } from 'react';
 import type { Entry } from '../../api/types';
 import { EMPTY_TYPE_AHEAD, type TypeAhead, typeAheadIndex, typeKey } from '../../lib/match';
 import { type Selection, jumpTo, moveCursor, selectAll, selectOnly } from '../../lib/selection';
-import { copyToOtherPane, openEntry, requestDelete, requestRename } from '../../stores/fileOps';
+import {
+  copyToOtherPane,
+  moveToOtherPane,
+  openEntry,
+  requestDelete,
+  requestRename,
+} from '../../stores/fileOps';
 import { type PaneId, otherPane } from '../../stores/paneTypes';
 import { usePanes } from '../../stores/panes';
 import { useUi } from '../../stores/ui';
@@ -123,6 +129,10 @@ export function useFileListKeys(args: Args) {
       case 'F5':
         event.preventDefault();
         copyToOtherPane(paneId);
+        break;
+      case 'F6':
+        event.preventDefault();
+        moveToOtherPane(paneId);
         break;
       case 'Escape':
         if (previewing) useUi.getState().closePreview();

@@ -6,6 +6,7 @@ import { JobKind, State } from './api/enums';
 import type { JobView, Update } from './api/types';
 import App from './App';
 import { ENTRIES_MIME, encodeDragPayload } from './lib/dragData';
+import { IS_MAC } from './lib/platform';
 import { usePanes } from './stores/panes';
 import { usePrompts } from './stores/prompts';
 import { useSettings } from './stores/settings';
@@ -146,8 +147,8 @@ afterEach(() => {
 const rowNames = (pane: 'left' | 'right') =>
   [...host.querySelectorAll(`[data-pane="${pane}"] [role=option]`)].map((r) => r.textContent ?? '');
 
-/** Dispatches an in-app drag of an S3 file onto el. happy-dom ignores DragEvent's dataTransfer init. */
-async function dropOn(el: Element | null | undefined) {
+/** Dispatches an in-app drag of an S3 file onto el, with the modifier keys in `mods` held. */
+async function dropOn(el: Element | null | undefined, mods: DragEventInit = {}) {
   const dataTransfer = new DataTransfer();
   dataTransfer.setData(
     ENTRIES_MIME,
@@ -156,11 +157,18 @@ async function dropOn(el: Element | null | undefined) {
   await act(async () => {
     for (const type of ['dragover', 'drop']) {
       const event = new DragEvent(type, { bubbles: true, cancelable: true });
+      // happy-dom drops the DragEvent init's dataTransfer and modifier keys.
       Object.defineProperty(event, 'dataTransfer', { value: dataTransfer });
+      for (const [name, value] of Object.entries(mods))
+        Object.defineProperty(event, name, { value });
       el?.dispatchEvent(event);
     }
   });
+  return dataTransfer;
 }
+
+const MOVE_MODIFIER: DragEventInit = IS_MAC ? { metaKey: true } : { shiftKey: true };
+const COPY_MODIFIER: DragEventInit = IS_MAC ? { shiftKey: true } : { metaKey: true };
 
 const documentsRow = () =>
   [...host.querySelectorAll<HTMLElement>('[data-pane="left"] [role=option]')].find((r) =>
@@ -367,6 +375,39 @@ describe('App', () => {
     });
   });
 
+  it('F6 moves the selection into the other pane', async () => {
+    await clickRow('notes.txt');
+    act(() => usePanes.getState().navigate('right', '/elsewhere'));
+    vi.mocked(api.transfers.move).mockResolvedValue('job');
+    await key(leftList(), { key: 'F6' });
+    expect(api.transfers.move).toHaveBeenCalledWith({
+      srcConn: 'local',
+      sources: ['/home/notes.txt'],
+      dstConn: 'local',
+      dstDir: '/elsewhere',
+    });
+    expect(api.transfers.copy).not.toHaveBeenCalled();
+  });
+
+  it('offers Move to other pane in the context menu', async () => {
+    await clickRow('notes.txt');
+    act(() => usePanes.getState().navigate('right', '/elsewhere'));
+    vi.mocked(api.transfers.move).mockResolvedValue('job');
+    await act(async () => {
+      [...host.querySelectorAll<HTMLElement>('[data-pane="left"] [role=option]')]
+        .find((r) => r.textContent?.includes('notes.txt'))
+        ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    });
+    const item = [...host.querySelectorAll<HTMLElement>('[role=menuitem]')].find((i) =>
+      i.textContent?.includes('Move to other pane')
+    );
+    expect(item?.textContent).toContain('F6');
+    await act(async () => item?.click());
+    expect(api.transfers.move).toHaveBeenCalledWith(
+      expect.objectContaining({ sources: ['/home/notes.txt'], dstDir: '/elsewhere' })
+    );
+  });
+
   describe('type to find', () => {
     it('jumps to and selects the first entry starting with the typed letters', async () => {
       await key(leftList(), { key: 'n' });
@@ -437,6 +478,28 @@ describe('App', () => {
       expect(api.transfers.copy).toHaveBeenCalledWith(
         expect.objectContaining({ srcConn: 's3:p', dstDir: '/home/Documents' })
       );
+    });
+
+    it('moves instead when the move modifier is held', async () => {
+      vi.mocked(api.transfers.move).mockResolvedValue('job');
+      await dropOn(documentsRow()?.querySelector('[data-file-drop-target]'), MOVE_MODIFIER);
+      expect(api.transfers.move).toHaveBeenCalledWith(
+        expect.objectContaining({ srcConn: 's3:p', dstDir: '/home/Documents' })
+      );
+      expect(api.transfers.copy).not.toHaveBeenCalled();
+    });
+
+    it('copies when only the other platform’s modifier is held', async () => {
+      await dropOn(documentsRow()?.querySelector('[data-file-drop-target]'), COPY_MODIFIER);
+      expect(api.transfers.copy).toHaveBeenCalledTimes(1);
+      expect(api.transfers.move).not.toHaveBeenCalled();
+    });
+
+    it('shows the move cursor only while the move modifier is held', async () => {
+      vi.mocked(api.transfers.move).mockResolvedValue('job');
+      const folder = documentsRow()?.querySelector('[data-file-drop-target]');
+      expect((await dropOn(folder, MOVE_MODIFIER)).dropEffect).toBe('move');
+      expect((await dropOn(folder)).dropEffect).toBe('copy');
     });
 
     it('copies into the current directory when dropped elsewhere on a folder row', async () => {

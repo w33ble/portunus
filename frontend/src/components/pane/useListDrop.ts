@@ -1,6 +1,6 @@
 import { type DragEvent, useCallback, useState } from 'react';
 import type { Entry } from '../../api/types';
-import { ENTRIES_MIME, decodeDragPayload } from '../../lib/dragData';
+import { ENTRIES_MIME, decodeDragPayload, dragOperation } from '../../lib/dragData';
 import { dropOnPane } from '../../stores/fileOps';
 import type { PaneId } from '../../stores/paneTypes';
 
@@ -12,7 +12,7 @@ function carriesEntries(event: DragEvent): boolean {
 
 function accept(event: DragEvent): void {
   event.preventDefault();
-  event.dataTransfer.dropEffect = 'copy';
+  event.dataTransfer.dropEffect = dragOperation(event);
 }
 
 /**
@@ -28,7 +28,7 @@ export function useListDrop(paneId: PaneId, dir: string) {
       event.stopPropagation();
       setTarget(null);
       const payload = decodeDragPayload(event.dataTransfer.getData(ENTRIES_MIME));
-      if (payload) dropOnPane(paneId, payload, dstDir);
+      if (payload) dropOnPane(paneId, payload, dstDir, dragOperation(event));
     },
     [paneId]
   );

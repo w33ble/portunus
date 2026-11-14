@@ -18,15 +18,30 @@ interface TransfersState {
   clearFinished: () => Promise<void>;
 }
 
-/** Panes showing a finished job's destination (or a delete's connection) need a fresh listing. */
+/**
+ * Panes showing a finished job's destination need a fresh listing. A delete or move also empties
+ * its source, which may be in any directory of the connection.
+ */
 function refreshPanesFor(job: JobView): void {
   const panes = usePanes.getState();
-  if (job.kind === JobKind.KindDelete) {
-    panes.refreshWhere(job.srcConn);
-    if (job.dstConn !== '' && job.dstConn !== job.srcConn) panes.refreshWhere(job.dstConn);
-    return;
+  switch (job.kind) {
+    case JobKind.KindCopy:
+      panes.refreshWhere(job.dstConn, job.dstDir);
+      return;
+    case JobKind.KindMove:
+      panes.refreshWhere(job.srcConn);
+      if (job.dstConn !== job.srcConn) panes.refreshWhere(job.dstConn, job.dstDir);
+      return;
+    case JobKind.KindDelete:
+      panes.refreshWhere(job.srcConn);
+      return;
+    case JobKind.$zero:
+      return;
+    default: {
+      const unreachable: never = job.kind;
+      return unreachable;
+    }
   }
-  panes.refreshWhere(job.dstConn, job.dstDir);
 }
 
 export const useTransfers = create<TransfersState>()((set, get) => ({

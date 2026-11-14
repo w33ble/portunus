@@ -1,3 +1,4 @@
+import { IS_MAC } from './platform';
 import { parentPath } from './paths';
 
 export const ENTRIES_MIME = 'application/x-portunus-entries';
@@ -27,7 +28,18 @@ export function decodeDragPayload(raw: string): DragPayload | null {
   return { connId, paths };
 }
 
-/** A copy into the directory the entries already live in is meaningless. */
+/** What a drag does when dropped: copies unless the platform's move modifier is held. */
+export type TransferOp = 'copy' | 'move';
+
+/** Cmd moves on macOS (as in Finder), Shift on Linux (as in GTK file managers). */
+export function dragOperation(
+  mods: { metaKey: boolean; shiftKey: boolean },
+  mac: boolean = IS_MAC
+): TransferOp {
+  return (mac ? mods.metaKey : mods.shiftKey) ? 'move' : 'copy';
+}
+
+/** A copy or move into the directory the entries already live in is meaningless. */
 export function isSameDirectoryDrop(
   payload: DragPayload,
   target: { connId: string; dir: string }

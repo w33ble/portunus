@@ -9,6 +9,7 @@ import { IS_MAC } from '../../lib/platform';
 import { visibleEntries } from '../../lib/sort';
 import {
   copyToOtherPane,
+  moveToOtherPane,
   openEntry,
   requestDelete,
   requestNewFolder,
@@ -169,7 +170,7 @@ export function FileList({ paneId, onEditPath }: Props) {
       }
       const dragged = paths.filter((p) => sel.selected.has(p));
       event.dataTransfer.setData(ENTRIES_MIME, encodeDragPayload({ connId, paths: dragged }));
-      event.dataTransfer.effectAllowed = 'copy';
+      event.dataTransfer.effectAllowed = 'copyMove';
     },
     [paneId, paths]
   );
@@ -190,6 +191,12 @@ export function FileList({ paneId, onEditPath }: Props) {
         disabled: !any,
         shortcut: 'F5',
         onSelect: () => copyToOtherPane(paneId),
+      },
+      {
+        label: 'Move to other pane',
+        disabled: !any,
+        shortcut: 'F6',
+        onSelect: () => moveToOtherPane(paneId),
       },
       {
         label: 'Rename…',
