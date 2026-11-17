@@ -21,9 +21,13 @@ interface ConnectionsState {
   sshUnavailable: string;
   /** True when saved S3 secrets last only for this session (no OS keychain). */
   secretsSessionOnly: boolean;
+  /** Bumped each time ~/.ssh/config is read again, so views that resolved an alias redo it. */
+  hostsVersion: number;
   load: () => Promise<void>;
   /** Reloads saved hosts, preferences and bookmarks. */
   loadSaved: () => Promise<void>;
+  /** Reads ~/.ssh/config again. Rejects, keeping the old host list, when it can't be read. */
+  reloadHosts: () => Promise<void>;
   setConnections: (list: readonly Connection[]) => void;
   upsert: (conn: Connection) => void;
   saveProfile: (profile: S3Profile, secret: string) => Promise<S3Profile>;
@@ -45,6 +49,7 @@ export const useConnections = create<ConnectionsState>()((set, get) => ({
   bookmarks: [],
   sshUnavailable: '',
   secretsSessionOnly: false,
+  hostsVersion: 0,
 
   async load() {
     const [connections, hosts, profiles, sshUnavailable, secretsSessionOnly] =
@@ -77,6 +82,16 @@ export const useConnections = create<ConnectionsState>()((set, get) => ({
     } catch (e) {
       useUi.getState().showError('Couldn’t read saved connections', toAppError(e));
     }
+  },
+
+  async reloadHosts() {
+    const [hosts, sshUnavailable] = await Promise.all([
+      api.connections.sshHosts(),
+      api.connections.sshAvailable().catch(() => get().sshUnavailable),
+    ]);
+    set((s) => ({ hosts, sshUnavailable, hostsVersion: s.hostsVersion + 1 }));
+    // Drops preferences of aliases that left the config.
+    await get().loadSaved();
   },
 
   setConnections: (connections) => set({ connections }),

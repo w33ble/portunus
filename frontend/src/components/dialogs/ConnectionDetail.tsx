@@ -29,12 +29,16 @@ function sourceLine(source: ConnSource): string {
 
 function IdentitySection({ editor }: { editor: ConnectionEditor }) {
   const sessionOnly = useConnections((s) => s.secretsSessionOnly);
+  // Remounts the ssh -G summary after ~/.ssh/config is read again.
+  const hostsVersion = useConnections((s) => s.hostsVersion);
   const { draft, conn } = editor;
   const { identity } = draft;
 
   switch (identity.kind) {
     case 'fixed':
-      return conn?.source === 'config' ? <ConfigHostDetails alias={conn.name} /> : null;
+      return conn?.source === 'config' ? (
+        <ConfigHostDetails key={hostsVersion} alias={conn.name} />
+      ) : null;
     case 'host':
       return (
         <SavedHostFields

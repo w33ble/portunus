@@ -1,7 +1,9 @@
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { flow, assert, HOME } from './lib.mjs';
 
 const REMOTE = `${process.env.E2E_DIR}/remote`;
 const DOCS = `${HOME}/Documents`;
+const SSH_CONFIG = `${HOME}/.ssh/config`;
 
 // Bookmarks, favorites and per-connection settings from #55, against the real sshd.
 await flow('connections', async ({ page, left, right, row, step, shot, goTo, pick, current }) => {
@@ -82,5 +84,24 @@ await flow('connections', async ({ page, left, right, row, step, shot, goTo, pic
   await conns.getByRole('radio', { name: 'None', exact: true }).check();
   await button('Favorite').click();
   await save();
+  await button('Done').click();
+
+  step('reload ~/.ssh/config from the manager');
+  const original = readFileSync(SSH_CONFIG, 'utf8');
+  appendFileSync(SSH_CONFIG, '\nHost added-later\n  HostName 127.0.0.1\n');
+  await pick(left, 'Manage connections…');
+  assert(!(await conns.getByRole('option', { name: /added-later/ }).count()), 'not listed yet');
+  await button('Reload SSH config').click();
+  await conns.getByRole('option', { name: /added-later/ }).click();
+  await conns.getByText('127.0.0.1').first().waitFor({ timeout: 15000 });
+  await shot('reloaded-ssh-config');
+  writeFileSync(SSH_CONFIG, original);
+  await button('Reload SSH config').click();
+  await conns.getByRole('option', { name: /added-later/ }).waitFor({ state: 'detached' });
+  const sidebar = conns.getByRole('listbox', { name: 'Connections' });
+  assert(
+    (await sidebar.getByRole('option', { selected: true }).innerText()).trim() === 'Local',
+    'a removed alias falls back to Local'
+  );
   await button('Done').click();
 });

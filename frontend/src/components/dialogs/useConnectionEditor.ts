@@ -75,6 +75,8 @@ export interface ConnectionEditor {
   save: () => Promise<string | null>;
   remove: () => Promise<void>;
   connect: () => void;
+  /** Reads ~/.ssh/config again; an alias that left it falls back to Local. */
+  reloadHosts: () => Promise<void>;
   done: () => void;
   answer: (choice: 'save' | 'discard' | 'cancel') => Promise<void>;
 }
@@ -252,6 +254,11 @@ export function useConnectionEditor(
         void usePanes.getState().connectTo(useUi.getState().activePane, target.target, target.name);
         onClose();
       }),
+    async reloadHosts() {
+      const ok = await run(() => useConnections.getState().reloadHosts());
+      const isNew = key === NEW_HOST_KEY || key === NEW_S3_KEY;
+      if (ok && !isNew && !catalogNow().some((c) => c.id === key)) edit(openNow(LOCAL_ID));
+    },
     done: () => guard(onClose),
     answer,
   };

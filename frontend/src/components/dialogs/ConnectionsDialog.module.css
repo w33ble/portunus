@@ -99,6 +99,11 @@
   min-height: 24px;
 }
 
+/* Sits at the far right, apart from + and −. */
+.reload {
+  margin-left: auto;
+}
+
 .confirmText {
   flex-basis: 100%;
   overflow: hidden;

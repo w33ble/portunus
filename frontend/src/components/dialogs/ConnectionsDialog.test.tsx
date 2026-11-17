@@ -584,4 +584,34 @@ describe('ConnectionsDialog', () => {
     press('Home');
     expect(selected()?.textContent).toBe('Local');
   });
+
+  it('reloads ~/.ssh/config: new aliases appear, a removed one falls back to Local', async () => {
+    vi.mocked(api.connections.sshHosts).mockResolvedValue([{ alias: 'staging', source: 'c:1' }]);
+    vi.mocked(api.connections.sshAvailable).mockResolvedValue('');
+    show('ssh:prod');
+    await act(async () => {});
+    expect(api.connections.sshHostDetails).toHaveBeenCalledTimes(1);
+
+    await clickAsync(button('Reload SSH config'));
+
+    expect(options().map((o) => o.textContent)).toEqual(['Local', 'staging', 'Archive']);
+    expect(selected()?.textContent).toBe('Local');
+    expect(api.connections.saved).toHaveBeenCalled();
+  });
+
+  it('re-resolves the selected alias on reload and shows a read error inline', async () => {
+    vi.mocked(api.connections.sshHosts).mockResolvedValueOnce([{ alias: 'prod', source: 'c:1' }]);
+    vi.mocked(api.connections.sshAvailable).mockResolvedValue('');
+    show('ssh:prod');
+    await act(async () => {});
+
+    await clickAsync(button('Reload SSH config'));
+    expect(api.connections.sshHostDetails).toHaveBeenCalledTimes(2);
+    expect(selected()?.textContent).toBe('prod');
+
+    vi.mocked(api.connections.sshHosts).mockRejectedValueOnce(new Error('bad Include'));
+    await clickAsync(button('Reload SSH config'));
+    expect(dialogs()[0]!.textContent).toContain('bad Include');
+    expect(options().map((o) => o.textContent)).toContain('prod');
+  });
 });

@@ -134,6 +134,16 @@ function ListActions({ editor }: { editor: ConnectionEditor }) {
       >
         <Icon name="minus" />
       </button>
+      <button
+        type="button"
+        className={`${controls.iconButton} ${styles.reload}`}
+        aria-label="Reload SSH config"
+        title="Read ~/.ssh/config again"
+        disabled={busy}
+        onClick={() => void editor.reloadHosts()}
+      >
+        <Icon name="refresh" />
+      </button>
     </div>
   );
 }
