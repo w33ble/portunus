@@ -57,7 +57,7 @@ func TestSavedKeepsAliasPrefsWhileSSHConfigIsUnreadable(t *testing.T) {
 	cfg := filepath.Join(t.TempDir(), "config")
 	writeSSHConfig(t, cfg, "Host web1\n  HostName web1.example.com\n")
 	s := newSavedApp(t, cfg)
-	if err := s.SaveConnectionPrefs("ssh:web1", connprefs.Prefs{OpenAt: "/srv"}, nil); err != nil {
+	if err := s.SaveConnectionPrefs("ssh:web1", connprefs.Prefs{OpenAt: "/srv"}, []connprefs.Bookmark{{Path: "/srv"}}); err != nil {
 		t.Fatal(err)
 	}
 

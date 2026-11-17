@@ -10,6 +10,7 @@ import {
   normalizeBookmarks,
   normalizePrefs,
   validateHostFields,
+  withBookmarks,
 } from './connectionDraft';
 
 const bookmark: Bookmark = { id: 'b1', connId: 'ssh:prod', path: '/srv/logs' };
@@ -83,15 +84,17 @@ describe('isDirty', () => {
   it('is clean for an untouched draft and for edits that normalise away', () => {
     const base = draftOf('ssh:prod');
     expect(isDirty(base, structuredClone(base))).toBe(false);
-    expect(isDirty(base, { ...base, prefs: { ...base.prefs, openAt: '   ', transfers: 0 } })).toBe(
-      false
-    );
+    expect(
+      isDirty(base, { ...base, prefs: { ...base.prefs, favorite: false, transfers: 0 } })
+    ).toBe(false);
     expect(isDirty(base, { ...base, prefs: { ...base.prefs, showHidden: null } })).toBe(false);
   });
 
   it('is dirty after changing a setting or a bookmark', () => {
     const base = draftOf('ssh:prod');
-    expect(isDirty(base, { ...base, prefs: { ...base.prefs, openAt: '/srv' } })).toBe(true);
+    const withBookmark = { ...base, bookmarks: [bookmark] };
+    expect(isDirty(withBookmark, { ...withBookmark, prefs: { openAt: '/srv/logs' } })).toBe(true);
+    expect(isDirty(base, { ...base, prefs: { ...base.prefs, favorite: true } })).toBe(true);
     expect(isDirty(base, { ...base, prefs: { ...base.prefs, showHidden: false } })).toBe(true);
     expect(isDirty(base, { ...base, bookmarks: [{ ...bookmark, name: 'Logs' }] })).toBe(true);
     expect(isDirty(base, { ...base, bookmarks: [{ ...bookmark, pinned: true }] })).toBe(true);
@@ -121,23 +124,44 @@ describe('isDirty', () => {
 describe('normalising', () => {
   it('drops unset preferences and keeps the rest', () => {
     expect(
-      normalizePrefs({ color: Color.ColorNone, openAt: ' /srv ', transfers: 0, showHidden: null })
+      normalizePrefs(
+        { color: Color.ColorNone, openAt: '/srv/logs', transfers: 0, showHidden: null },
+        [bookmark]
+      )
     ).toEqual({
-      openAt: '/srv',
+      openAt: '/srv/logs',
     });
     expect(
-      normalizePrefs({
-        color: Color.ColorBlue,
-        transfers: 3,
-        showHidden: false,
-        hideInPicker: true,
-      })
+      normalizePrefs(
+        {
+          color: Color.ColorBlue,
+          transfers: 3,
+          showHidden: false,
+          hideInPicker: true,
+          favorite: true,
+        },
+        []
+      )
     ).toEqual({
       color: 'blue',
       transfers: 3,
       showHidden: false,
       hideInPicker: true,
+      favorite: true,
     });
+  });
+
+  it('drops an open-at folder that isn’t a bookmark', () => {
+    expect(normalizePrefs({ openAt: '/srv/logs' }, [])).toEqual({});
+  });
+
+  it('resets open-at to the home folder when its bookmark is removed', () => {
+    const base = { ...draftOf('ssh:prod'), bookmarks: [bookmark] };
+    const set = { ...base, prefs: { ...base.prefs, openAt: '/srv/logs' } };
+    expect(withBookmarks(set, [bookmark]).prefs.openAt).toBe('/srv/logs');
+    const removed = withBookmarks(set, []);
+    expect(removed.prefs.openAt).toBeUndefined();
+    expect(removed.prefs.color).toBe(Color.ColorRed);
   });
 
   it('trims bookmark names and omits blank ones', () => {

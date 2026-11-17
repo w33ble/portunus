@@ -52,7 +52,7 @@ func main() {
 	var mainWindow atomic.Pointer[application.WebviewWindow]
 	paintWindow := func(id string) {
 		if win := mainWindow.Load(); win != nil {
-			win.SetBackgroundColour(windowColour(id, app.Env.IsDarkMode()))
+			win.SetBackgroundColour(windowColor(id, app.Env.IsDarkMode()))
 		}
 	}
 
@@ -94,7 +94,7 @@ func main() {
 				TitleBar:                application.MacTitleBarHiddenInset,
 				Appearance:              macAppearance(saved),
 			},
-			BackgroundColour: windowColour(saved, app.Env.IsDarkMode()),
+			BackgroundColour: windowColor(saved, app.Env.IsDarkMode()),
 			URL:              "/",
 		})
 		mainWindow.Store(win)

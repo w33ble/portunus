@@ -68,6 +68,29 @@ export function pickerConnections(catalog: readonly KnownConnection[]): KnownCon
   return catalog.filter((c) => c.source === 'local' || !c.prefs.hideInPicker);
 }
 
+export interface PickerSection {
+  id: 'favorites' | 'local' | 'ssh' | 's3';
+  label: string;
+  items: KnownConnection[];
+}
+
+/** The picker's groups: favorites first, then Local, SSH hosts and S3, each without favorites. */
+export function pickerSections(catalog: readonly KnownConnection[]): PickerSection[] {
+  const offered = pickerConnections(catalog);
+  const rest = offered.filter((c) => !c.prefs.favorite);
+  const sections: PickerSection[] = [
+    { id: 'favorites', label: 'Favorites', items: offered.filter((c) => c.prefs.favorite) },
+    { id: 'local', label: 'Local', items: rest.filter((c) => c.source === 'local') },
+    {
+      id: 'ssh',
+      label: 'SSH hosts',
+      items: rest.filter((c) => c.source === 'config' || c.source === 'saved'),
+    },
+    { id: 's3', label: 'S3', items: rest.filter((c) => c.source === 's3') },
+  ];
+  return sections.filter((s) => s.items.length > 0);
+}
+
 export function bookmarkLabel(b: Bookmark): string {
   return b.name || baseName(b.path) || b.path;
 }

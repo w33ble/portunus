@@ -129,6 +129,12 @@
   background: var(--selection-inactive);
 }
 
+/* Secondary text drops under 4.5:1 on the inactive selection in several themes. */
+.row[data-selected='true'] .size,
+.row[data-selected='true'] .modified {
+  color: var(--text);
+}
+
 [data-pane-active='true'] .row[data-selected='true'] {
   background: var(--selection-strong);
   color: var(--selection-text);

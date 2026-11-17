@@ -1,6 +1,7 @@
 import type { ConnSource } from '../../lib/catalog';
 import { useConnections } from '../../stores/connections';
 import controls from '../ui/controls.module.css';
+import { Icon } from '../ui/Icon';
 import { BookmarksEditor } from './BookmarksEditor';
 import { ConfigHostDetails } from './ConfigHostDetails';
 import { ConnectionPrefsFields } from './ConnectionPrefsFields';
@@ -74,15 +75,29 @@ export function ConnectionDetail({ editor }: { editor: ConnectionEditor }) {
           <h3 className={styles.detailName}>{label}</h3>
           <p className={styles.source}>{sourceLine(source)}</p>
         </div>
+        <button
+          type="button"
+          className={`${controls.iconButton} ${draft.prefs.favorite ? styles.favorite : ''}`}
+          aria-label="Favorite"
+          aria-pressed={draft.prefs.favorite ?? false}
+          title={
+            draft.prefs.favorite ? 'Favorite: listed first in the picker' : 'Mark as a favorite'
+          }
+          onClick={() => editor.setPrefs({ favorite: !draft.prefs.favorite })}
+        >
+          <Icon name="star" fill={draft.prefs.favorite ? 'currentColor' : 'none'} />
+        </button>
         {source !== 'local' && (
-          <label className={controls.checkbox}>
-            <input
-              type="checkbox"
-              checked={!draft.prefs.hideInPicker}
-              onChange={(e) => editor.setPrefs({ hideInPicker: !e.target.checked })}
-            />
-            In picker
-          </label>
+          <button
+            type="button"
+            className={controls.iconButton}
+            aria-label="Hide from picker"
+            aria-pressed={draft.prefs.hideInPicker ?? false}
+            title={draft.prefs.hideInPicker ? 'Hidden from the picker' : 'Shown in the picker'}
+            onClick={() => editor.setPrefs({ hideInPicker: !draft.prefs.hideInPicker })}
+          >
+            <Icon name={draft.prefs.hideInPicker ? 'eyeOff' : 'eye'} />
+          </button>
         )}
         <button
           type="button"
@@ -96,11 +111,16 @@ export function ConnectionDetail({ editor }: { editor: ConnectionEditor }) {
       <div className={styles.detailBody}>
         <IdentitySection editor={editor} />
         <h4 className={styles.sectionTitle}>Settings</h4>
-        <ConnectionPrefsFields prefs={draft.prefs} onChange={editor.setPrefs} />
+        <ConnectionPrefsFields
+          prefs={draft.prefs}
+          bookmarks={draft.bookmarks}
+          onChange={editor.setPrefs}
+        />
         <h4 className={styles.sectionTitle}>Bookmarks</h4>
         <BookmarksEditor
           connId={conn?.id ?? null}
           bookmarks={draft.bookmarks}
+          openAt={draft.prefs.openAt}
           onChange={editor.setBookmarks}
         />
       </div>

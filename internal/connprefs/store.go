@@ -146,6 +146,9 @@ func (s *Store) SetConnection(connID string, p Prefs, bookmarks []Bookmark) erro
 			keep = append(keep, b)
 		}
 	}
+	if p.OpenAt != "" && !slices.ContainsFunc(keep, func(b Bookmark) bool { return b.Path == p.OpenAt }) {
+		return fmt.Errorf("connprefs: open-at folder %q must be one of the connection's bookmarks", p.OpenAt)
+	}
 
 	return s.update(func(d *Data) error {
 		d.Bookmarks = slices.DeleteFunc(d.Bookmarks, func(b Bookmark) bool { return b.ConnID == connID })
@@ -197,13 +200,23 @@ func (s *Store) AddBookmark(b Bookmark) (Bookmark, error) {
 	return b, nil
 }
 
+// RemoveBookmark deletes a bookmark. A connection that opened at it opens at home again.
 func (s *Store) RemoveBookmark(id string) error {
 	return s.update(func(d *Data) error {
 		i := slices.IndexFunc(d.Bookmarks, func(o Bookmark) bool { return o.ID == id })
 		if i < 0 {
 			return fmt.Errorf("connprefs: bookmark %s: %w", id, ErrNotFound)
 		}
+		b := d.Bookmarks[i]
 		d.Bookmarks = slices.Delete(d.Bookmarks, i, i+1)
+		if p, ok := d.Prefs[b.ConnID]; ok && p.OpenAt == b.Path {
+			p.OpenAt = ""
+			if p == (Prefs{}) {
+				delete(d.Prefs, b.ConnID)
+			} else {
+				d.Prefs[b.ConnID] = p
+			}
+		}
 		return nil
 	})
 }

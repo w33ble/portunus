@@ -13,13 +13,16 @@ interface Props {
   /** Null while the connection isn't saved: bookmarks need a connection to belong to. */
   connId: string | null;
   bookmarks: readonly Bookmark[];
+  /** The folder the connection opens at, if any. */
+  openAt: string | undefined;
   onChange: (bookmarks: Bookmark[]) => void;
 }
 
-export function BookmarksEditor({ connId, bookmarks, onChange }: Props) {
+export function BookmarksEditor({ connId, bookmarks, openAt, onChange }: Props) {
   const listId = useId();
   const recents = useRecents((s) => (connId === null ? undefined : s.byConn[connId]));
   const [path, setPath] = useState('');
+  const [removing, setRemoving] = useState<string | null>(null);
 
   if (connId === null) {
     return <p className={controls.hint}>Save this connection to bookmark its folders.</p>;
@@ -48,7 +51,7 @@ export function BookmarksEditor({ connId, bookmarks, onChange }: Props) {
             className={`${controls.iconButton} ${b.pinned ? styles.pinned : ''}`}
             aria-label={`${b.pinned ? 'Unpin' : 'Pin'} ${bookmarkLabel(b)}`}
             aria-pressed={b.pinned ?? false}
-            title={b.pinned ? 'Unpin from favourites' : 'Pin as a favourite'}
+            title={b.pinned ? 'Unpin from favorites' : 'Pin as a favorite'}
             onClick={() => patch(i, { pinned: !b.pinned })}
           >
             <Icon name="star" fill={b.pinned ? 'currentColor' : 'none'} />
@@ -63,15 +66,34 @@ export function BookmarksEditor({ connId, bookmarks, onChange }: Props) {
             />
             <span className={`${controls.mono} ${styles.path}`}>{b.path}</span>
           </div>
-          <button
-            type="button"
-            className={controls.iconButton}
-            aria-label={`Remove bookmark ${bookmarkLabel(b)}`}
-            title="Remove bookmark"
-            onClick={() => onChange(bookmarks.filter((_, j) => j !== i))}
-          >
-            <Icon name="trash" />
-          </button>
+          {b.path === openAt && <span className={styles.badge}>Opens here</span>}
+          {removing === b.path ? (
+            <div className={styles.confirmRow}>
+              <button
+                type="button"
+                className={`${controls.button} ${controls.danger}`}
+                onClick={() => {
+                  setRemoving(null);
+                  onChange(bookmarks.filter((_, j) => j !== i));
+                }}
+              >
+                Remove
+              </button>
+              <button type="button" className={controls.button} onClick={() => setRemoving(null)}>
+                Keep
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className={controls.iconButton}
+              aria-label={`Remove bookmark ${bookmarkLabel(b)}`}
+              title="Remove bookmark"
+              onClick={() => setRemoving(b.path)}
+            >
+              <Icon name="trash" />
+            </button>
+          )}
         </div>
       ))}
       <div className={styles.addBookmark}>

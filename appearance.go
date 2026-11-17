@@ -6,8 +6,8 @@ import (
 	"github.com/w33ble/portunus/internal/theme"
 )
 
-// windowColour is the theme's page background, for the native window behind the webview.
-func windowColour(id string, systemDark bool) application.RGBA {
+// windowColor is the theme's page background, for the native window behind the webview.
+func windowColor(id string, systemDark bool) application.RGBA {
 	bg := theme.Resolve(id, systemDark).Background
 	return application.NewRGB(bg.R, bg.G, bg.B)
 }

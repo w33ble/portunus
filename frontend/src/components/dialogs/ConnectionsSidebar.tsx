@@ -11,6 +11,7 @@ interface Row {
   name: string;
   color: string;
   hidden: boolean;
+  favorite: boolean;
 }
 
 interface Group {
@@ -29,6 +30,7 @@ function groupsOf(editor: ConnectionEditor, query: string): Group[] {
       name: own ? label : c.name,
       color: prefs.color ?? '',
       hidden: c.source !== 'local' && (prefs.hideInPicker ?? false),
+      favorite: prefs.favorite ?? false,
     };
   };
   const needle = query.trim().toLowerCase();
@@ -38,7 +40,13 @@ function groupsOf(editor: ConnectionEditor, query: string): Group[] {
       .map(toRow)
       .filter((r) => needle === '' || r.id === key || r.name.toLowerCase().includes(needle));
     if (fresh !== undefined && key === fresh) {
-      rows.push({ id: fresh, name: label, color: draft.prefs.color ?? '', hidden: false });
+      rows.push({
+        id: fresh,
+        name: label,
+        color: draft.prefs.color ?? '',
+        hidden: false,
+        favorite: draft.prefs.favorite ?? false,
+      });
     }
     return rows;
   };
@@ -215,6 +223,11 @@ export function ConnectionsSidebar({ editor }: { editor: ConnectionEditor }) {
                   />
                   <span className={styles.rowName}>{r.name}</span>
                   {selected && editor.dirty && <span className={styles.edited}>· edited</span>}
+                  {r.favorite && (
+                    <span className={styles.favoriteMark} aria-hidden="true">
+                      <Icon name="star" size={14} fill="currentColor" />
+                    </span>
+                  )}
                   {r.hidden && (
                     <span className={styles.hiddenMark} title="Hidden from the picker">
                       <Icon name="eyeOff" size={14} />

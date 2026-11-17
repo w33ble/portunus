@@ -8,6 +8,7 @@ import { ErrorDialog } from './ErrorDialog';
 import { HostKeyDialog } from './HostKeyDialog';
 import { NameDialog } from './NameDialog';
 import { QuickConnectDialog } from './QuickConnectDialog';
+import { RemoveBookmarkDialog } from './RemoveBookmarkDialog';
 import { SecretDialog } from './SecretDialog';
 import { SettingsDialog } from './SettingsDialog';
 
@@ -47,6 +48,8 @@ function UiDialog() {
       return <QuickConnectDialog paneId={dialog.paneId} onClose={close} />;
     case 'connections':
       return <ConnectionsDialog connId={dialog.connId} onClose={close} />;
+    case 'removeBookmark':
+      return <RemoveBookmarkDialog bookmark={dialog.bookmark} onClose={close} />;
     case 'settings':
       return <SettingsDialog onClose={close} />;
     case 'error':

@@ -2,7 +2,6 @@ import type { Ref } from 'react';
 import { historyShortcut } from '../../lib/history';
 import { baseName, parentPath } from '../../lib/paths';
 import { IS_MAC } from '../../lib/platform';
-import { useConnections } from '../../stores/connections';
 import { requestNewFolder } from '../../stores/fileOps';
 import type { PaneId } from '../../stores/paneTypes';
 import { usePanes } from '../../stores/panes';
@@ -20,9 +19,6 @@ interface Props {
 
 export function PaneHeader({ paneId, pathBarRef }: Props) {
   const pane = usePanes((s) => s.panes[paneId]);
-  const color = useConnections((s) =>
-    pane.connId === null ? undefined : s.prefs[pane.connId]?.color
-  );
   const noConnection = pane.connId === null;
   const atRoot = parentPath(pane.path) === pane.path;
   const backTo = pane.history.back.at(-1)?.path;
@@ -31,14 +27,6 @@ export function PaneHeader({ paneId, pathBarRef }: Props) {
   return (
     <div className={styles.header}>
       <ConnectionPicker paneId={paneId} />
-      {color && (
-        <span
-          className={styles.tag}
-          style={{ backgroundColor: `var(--tag-${color})` }}
-          title={`${color} tag`}
-          aria-hidden="true"
-        />
-      )}
       <div className={styles.nav}>
         <button
           type="button"

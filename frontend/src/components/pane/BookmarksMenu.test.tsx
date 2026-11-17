@@ -9,6 +9,7 @@ import { usePanes } from '../../stores/panes';
 import { useRecents } from '../../stores/recents';
 import { localConnection } from '../../stores/testApi';
 import { useUi } from '../../stores/ui';
+import { DialogHost } from '../dialogs/DialogHost';
 import { BookmarksMenu } from './BookmarksMenu';
 import { Pane } from './Pane';
 
@@ -75,7 +76,7 @@ const item = (text: string) => items().find((i) => i.textContent?.includes(text)
 const headings = () => [...host.querySelectorAll('[role=presentation]')].map((h) => h.textContent);
 
 describe('BookmarksMenu', () => {
-  it('lists favourites, this connection’s bookmarks and recent folders without the current one', () => {
+  it('lists favorites, this connection’s bookmarks and recent folders without the current one', () => {
     useConnections.setState({
       profiles: [{ id: 'p1', name: 'Prod' } as never],
       bookmarks: [
@@ -89,7 +90,7 @@ describe('BookmarksMenu', () => {
 
     openMenu();
 
-    expect(headings()).toEqual(['Favourites', 'Bookmarks on Local', 'Recent folders']);
+    expect(headings()).toEqual(['Favorites', 'Bookmarks on Local', 'Recent folders']);
     expect(items().map((i) => i.textContent)).toEqual([
       `Bookmark this folder${IS_MAC ? '⌘D' : 'Ctrl+D'}`,
       'logsProd',
@@ -107,10 +108,10 @@ describe('BookmarksMenu', () => {
 
     openMenu();
 
-    expect(item('Remove bookmark')).toBeDefined();
+    expect(item('Remove bookmark…')).toBeDefined();
   });
 
-  it('connects to another connection and opens a favourite’s folder', async () => {
+  it('connects to another connection and opens a favorite’s folder', async () => {
     useConnections.setState({
       profiles: [{ id: 'p1', name: 'Prod' } as never],
       bookmarks: [bookmark('b1', 's3:p1', '/logs', { pinned: true })],
@@ -175,34 +176,107 @@ describe('BookmarksMenu', () => {
   });
 });
 
+const press = (pane: HTMLElement) =>
+  act(async () => {
+    pane.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'd', ctrlKey: true, bubbles: true, cancelable: true })
+    );
+  });
+
+const button = (name: string) =>
+  [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(
+    (b) => b.textContent === name
+  )!;
+
 describe('bookmark shortcut', () => {
-  it('Ctrl+D bookmarks the folder, then removes the bookmark', async () => {
+  it('Ctrl+D bookmarks the folder', async () => {
     const added = bookmark('b9', 'local', '/home');
     vi.mocked(api.connections.addBookmark).mockResolvedValue(added);
-    vi.mocked(api.connections.removeBookmark).mockResolvedValue(undefined);
-    vi.mocked(api.connections.saved)
-      .mockResolvedValueOnce({ hosts: [], prefs: {}, bookmarks: [added] })
-      .mockResolvedValueOnce({ hosts: [], prefs: {}, bookmarks: [] });
+    vi.mocked(api.connections.saved).mockResolvedValue({
+      hosts: [],
+      prefs: {},
+      bookmarks: [added],
+    });
     showPane('local', '/home');
     await act(async () => root.render(<Pane paneId="left" />));
-    const pane = host.querySelector('section')!;
-    const press = () =>
-      act(async () => {
-        pane.dispatchEvent(
-          new KeyboardEvent('keydown', { key: 'd', ctrlKey: true, bubbles: true, cancelable: true })
-        );
-      });
 
-    await press();
+    await press(host.querySelector('section')!);
+
     expect(api.connections.addBookmark).toHaveBeenCalledWith({
       id: '',
       connId: 'local',
       path: '/home',
     });
     expect(useConnections.getState().bookmarks).toEqual([added]);
+  });
 
-    await press();
+  it('Ctrl+D on a bookmarked folder asks first, and only Remove deletes it', async () => {
+    const existing = bookmark('b9', 'local', '/home', { name: 'Home base' });
+    useConnections.setState({ bookmarks: [existing] });
+    vi.mocked(api.connections.removeBookmark).mockResolvedValue(undefined);
+    vi.mocked(api.connections.saved).mockResolvedValue({ hosts: [], prefs: {}, bookmarks: [] });
+    showPane('local', '/home');
+    await act(async () =>
+      root.render(
+        <>
+          <Pane paneId="left" />
+          <DialogHost />
+        </>
+      )
+    );
+
+    await press(host.querySelector('section')!);
+    expect(host.querySelector('dialog')?.textContent).toContain('Remove bookmark?');
+    expect(host.querySelector('dialog')?.textContent).toContain('Home base');
+    expect(host.querySelector('dialog')?.textContent).toContain('/home');
+    expect(api.connections.removeBookmark).not.toHaveBeenCalled();
+
+    await act(async () => button('Cancel').click());
+    expect(host.querySelector('dialog')).toBeNull();
+    expect(api.connections.removeBookmark).not.toHaveBeenCalled();
+
+    await press(host.querySelector('section')!);
+    await act(async () => button('Remove').click());
     expect(api.connections.removeBookmark).toHaveBeenCalledWith('b9');
     expect(useConnections.getState().bookmarks).toEqual([]);
+    expect(host.querySelector('dialog')).toBeNull();
+  });
+
+  it('shows a backend error in the dialog and keeps it open', async () => {
+    useConnections.setState({ bookmarks: [bookmark('b9', 'local', '/home')] });
+    vi.mocked(api.connections.removeBookmark).mockRejectedValue(new Error('disk full'));
+    showPane('local', '/home');
+    await act(async () =>
+      root.render(
+        <>
+          <Pane paneId="left" />
+          <DialogHost />
+        </>
+      )
+    );
+
+    await press(host.querySelector('section')!);
+    await act(async () => button('Remove').click());
+
+    expect(host.querySelector('dialog')?.textContent).toContain('disk full');
+  });
+
+  it('the menu item opens the same confirmation', async () => {
+    useConnections.setState({ bookmarks: [bookmark('b2', 'local', '/home/docs')] });
+    showPane('local', '/home/docs');
+    act(() =>
+      root.render(
+        <>
+          <BookmarksMenu paneId="left" />
+          <DialogHost />
+        </>
+      )
+    );
+    act(() => host.querySelector<HTMLElement>('[aria-label="Bookmarks"]')!.click());
+
+    await act(async () => item('Remove bookmark…').click());
+
+    expect(host.querySelector('dialog')?.textContent).toContain('Remove bookmark?');
+    expect(api.connections.removeBookmark).not.toHaveBeenCalled();
   });
 });

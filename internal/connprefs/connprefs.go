@@ -45,7 +45,7 @@ func SSHConnID(user, host string, port int) string {
 	return "ssh:" + hostPort
 }
 
-// Color is a connection's colour tag.
+// Color is a connection's color tag.
 type Color string
 
 const (
@@ -69,7 +69,8 @@ func (c Color) valid() bool {
 // Prefs are per-connection settings. The zero value means "use the app defaults".
 type Prefs struct {
 	Color Color `json:"color,omitzero"`
-	// OpenAt is the folder a pane opens at on connect, instead of the connection's home.
+	// OpenAt is the bookmarked folder a pane opens at on connect, instead of the connection's
+	// home. It is always the path of one of the connection's bookmarks.
 	OpenAt string `json:"openAt,omitzero"`
 	// Transfers overrides the per-connection transfer limit; 0 uses the global setting.
 	Transfers int `json:"transfers,omitzero"`
@@ -77,9 +78,11 @@ type Prefs struct {
 	ShowHidden *bool `json:"showHidden,omitzero"`
 	// HideInPicker leaves the connection out of the connection picker.
 	HideInPicker bool `json:"hideInPicker,omitzero"`
+	// Favorite lists the connection first in the connection picker.
+	Favorite bool `json:"favorite,omitzero"`
 }
 
-// Bookmark is a saved folder on one connection. A pinned bookmark is a favourite,
+// Bookmark is a saved folder on one connection. A pinned bookmark is a favorite,
 // listed from every pane whatever its connection.
 type Bookmark struct {
 	ID     string `json:"id"`
@@ -148,7 +151,7 @@ func normalizePrefs(p Prefs) (Prefs, error) {
 	p.OpenAt = strings.TrimSpace(p.OpenAt)
 	switch {
 	case !p.Color.valid():
-		return Prefs{}, fmt.Errorf("connprefs: unknown colour %q", p.Color)
+		return Prefs{}, fmt.Errorf("connprefs: unknown color %q", p.Color)
 	case p.OpenAt != "" && !isAbs(p.OpenAt):
 		return Prefs{}, fmt.Errorf("connprefs: open-at folder %q must be an absolute path", p.OpenAt)
 	case p.Transfers < 0 || p.Transfers > MaxTransfers:

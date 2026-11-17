@@ -46,7 +46,7 @@ export function BookmarksMenu({ paneId }: { paneId: PaneId }) {
 
     const list: MenuItem[] = [
       {
-        label: existing ? 'Remove bookmark' : 'Bookmark this folder',
+        label: existing ? 'Remove bookmark…' : 'Bookmark this folder',
         shortcut: SHORTCUT,
         disabled: !allowed,
         ...(!allowed && { hint: 'Save this host to bookmark its folders' }),
@@ -60,7 +60,7 @@ export function BookmarksMenu({ paneId }: { paneId: PaneId }) {
     };
 
     section(
-      'Favourites',
+      'Favorites',
       bookmarks
         .filter((b) => b.pinned && connName(b.connId) !== undefined)
         .map((b) => ({

@@ -340,14 +340,14 @@ describe('App', () => {
   });
 
   it('opens the connections dialog from the picker, on the pane’s own connection', async () => {
-    const picker = host.querySelector<HTMLSelectElement>(
-      '[data-pane="left"] select[aria-label="Connection"]'
+    const picker = host.querySelector<HTMLButtonElement>(
+      '[data-pane="left"] button[aria-label="Connection"]'
     )!;
-    const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!;
-    await act(async () => {
-      setter.call(picker, '__manage');
-      picker.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+    await act(async () => picker.click());
+    const manage = [...host.querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => b.textContent === 'Manage connections…'
+    )!;
+    await act(async () => manage.click());
 
     const dialog = host.querySelector('dialog')!;
     expect(dialog.querySelector('h2')?.textContent).toBe('Connections');

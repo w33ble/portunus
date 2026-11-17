@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { AppError } from '../api/errors';
+import type { Bookmark } from '../api/types';
 import type { PaneId } from './paneTypes';
 
 export type Tab = 'browser' | 'transfers';
@@ -17,6 +18,8 @@ export type Dialog =
   | { kind: 'quickConnect'; paneId: PaneId }
   /** The connection manager, with `connId` selected (else the first connection). */
   | { kind: 'connections'; connId?: string }
+  /** Asks before deleting a saved bookmark (⌘D or the bookmarks menu on a bookmarked folder). */
+  | { kind: 'removeBookmark'; bookmark: Bookmark }
   | { kind: 'settings' }
   | { kind: 'error'; title: string; message: string; hint: string | null };
 

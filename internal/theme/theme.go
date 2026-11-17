@@ -1,4 +1,4 @@
-// Package theme is the backend's view of the built-in colour themes: which IDs exist, whether
+// Package theme is the backend's view of the built-in color themes: which IDs exist, whether
 // each is dark, and its background, so the native window and the first paint match the saved
 // theme. The palettes themselves live in frontend/src/themes.
 package theme
@@ -17,7 +17,7 @@ const (
 	Dark  = "dark"
 )
 
-// RGB is an opaque colour.
+// RGB is an opaque color.
 type RGB struct{ R, G, B uint8 }
 
 // Theme is one built-in palette. Background is its `--bg` token.

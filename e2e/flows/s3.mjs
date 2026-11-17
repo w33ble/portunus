@@ -2,12 +2,12 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { flow, assert, sameFile, previewFixtures, HOME } from './lib.mjs';
 
 await flow('s3', async (ctx) => {
-  const { page, left, right, row, step, shot, goTo, shiftDrag } = ctx;
+  const { page, left, right, row, step, shot, goTo, shiftDrag, pick } = ctx;
   await goTo(left, `${HOME}/Documents`);
   await row(left, 'random.bin').waitFor();
 
   step('create S3 profile');
-  await right.getByLabel('Connection').selectOption({ label: 'Manage connections…' });
+  await pick(right, 'Manage connections…');
   const dlg = page.getByRole('dialog');
   await dlg.getByRole('button', { name: 'Add connection' }).click();
   await dlg.getByRole('button', { name: 'S3 profile' }).click();
@@ -25,7 +25,7 @@ await flow('s3', async (ctx) => {
   await dlg.getByRole('button', { name: 'Done' }).click();
 
   step('connect and create a bucket');
-  await right.getByLabel('Connection').selectOption({ label: 'rustfs-e2e' });
+  await pick(right, 'rustfs-e2e');
   await page.waitForTimeout(1000);
   await right.getByLabel('New folder').click();
   await page.keyboard.type('e2e-bucket');

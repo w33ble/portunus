@@ -134,7 +134,7 @@ async function clickAsync(el: HTMLElement) {
 
 function editProd() {
   click(radio('Red'));
-  type(field('Open at')! as HTMLInputElement, '/srv');
+  choose(field('Hidden files') as HTMLSelectElement, 'show');
 }
 
 describe('ConnectionsDialog', () => {
@@ -191,7 +191,7 @@ describe('ConnectionsDialog', () => {
 
     click(option('prod'));
     expect(option('prod').textContent).not.toContain('edited');
-    expect((field('Open at') as HTMLInputElement).value).toBe('');
+    expect((field('Hidden files') as HTMLSelectElement).value).toBe('');
     expect(radio('Red').checked).toBe(false);
   });
 
@@ -204,7 +204,7 @@ describe('ConnectionsDialog', () => {
     editProd();
     act(() => useConnections.setState({ bookmarks: [logs, tmp] }));
     expect(option('prod').textContent).toContain('· edited');
-    expect((field('Open at') as HTMLInputElement).value).not.toBe('');
+    expect(radio('Red').checked).toBe(true);
   });
 
   it('saves the edits when asked, then moves on', async () => {
@@ -216,7 +216,7 @@ describe('ConnectionsDialog', () => {
 
     expect(api.connections.saveConnectionPrefs).toHaveBeenCalledWith(
       'ssh:prod',
-      { color: 'red', openAt: '/srv' },
+      { color: 'red', showHidden: true },
       []
     );
     expect(selected()?.textContent).toBe('Local');
@@ -230,7 +230,7 @@ describe('ConnectionsDialog', () => {
     click(button('Cancel', prompt()));
     expect(prompt()).toBeUndefined();
     expect(selected()?.textContent).toContain('prod');
-    expect((field('Open at') as HTMLInputElement).value).toBe('/srv');
+    expect(radio('Red').checked).toBe(true);
   });
 
   it('reverts edits with Revert and enables Save and Revert only while edited', () => {
@@ -240,7 +240,7 @@ describe('ConnectionsDialog', () => {
     editProd();
     expect(button('Save').disabled).toBe(false);
     click(button('Revert'));
-    expect((field('Open at') as HTMLInputElement).value).toBe('');
+    expect(radio('Red').checked).toBe(false);
     expect(button('Save').disabled).toBe(true);
   });
 
@@ -346,22 +346,50 @@ describe('ConnectionsDialog', () => {
     expect(button('Remove connection')).toBeDefined();
   });
 
-  it('dims connections hidden from the picker and toggles them with In picker', async () => {
+  it('dims connections hidden from the picker and toggles them with the eye button', async () => {
     seed({ prefs: { 'ssh:prod': { hideInPicker: true } } });
     show('ssh:prod');
     expect(option('prod').querySelector('[title="Hidden from the picker"]')).not.toBeNull();
     expect(option('Archive').querySelector('[title="Hidden from the picker"]')).toBeNull();
-    expect((field('In picker') as HTMLInputElement).checked).toBe(false);
+    expect(button('Hide from picker').getAttribute('aria-pressed')).toBe('true');
+    expect(button('Hide from picker').title).toBe('Hidden from the picker');
 
-    click(field('In picker')!);
+    click(button('Hide from picker'));
+    expect(button('Hide from picker').getAttribute('aria-pressed')).toBe('false');
+    expect(button('Hide from picker').title).toBe('Shown in the picker');
     expect(option('prod').querySelector('[title="Hidden from the picker"]')).toBeNull();
     await clickAsync(button('Save'));
     expect(api.connections.saveConnectionPrefs).toHaveBeenCalledWith('ssh:prod', {}, []);
+
+    click(button('Hide from picker'));
+    await clickAsync(button('Save'));
+    expect(api.connections.saveConnectionPrefs).toHaveBeenLastCalledWith(
+      'ssh:prod',
+      { hideInPicker: true },
+      []
+    );
   });
 
-  it('has no In picker choice for Local', () => {
+  it('has no hide-from-picker button for Local', () => {
     show();
-    expect(field('In picker')).toBeUndefined();
+    expect(button('Hide from picker')).toBeUndefined();
+  });
+
+  it('favorites a connection, marks it in the list and saves it, Local included', async () => {
+    show();
+    expect(button('Favorite').getAttribute('aria-pressed')).toBe('false');
+    expect(option('Local').querySelector('svg')).toBeNull();
+
+    click(button('Favorite'));
+    expect(button('Favorite').getAttribute('aria-pressed')).toBe('true');
+    expect(option('Local').querySelector('svg')).not.toBeNull();
+    await clickAsync(button('Save'));
+
+    expect(api.connections.saveConnectionPrefs).toHaveBeenCalledWith(
+      'local',
+      { favorite: true },
+      []
+    );
   });
 
   it('edits parallel transfers and hidden files against the global defaults', async () => {
@@ -411,6 +439,7 @@ describe('ConnectionsDialog', () => {
     click(button('Pin logs'));
     type(host.querySelector<HTMLInputElement>('input[aria-label="Name for /tmp"]')!, 'Temp');
     click(button('Remove bookmark Temp'));
+    click(button('Remove'));
     type(
       host.querySelector<HTMLInputElement>('input[aria-label="Folder to bookmark"]')!,
       '/var/www/'
@@ -421,6 +450,78 @@ describe('ConnectionsDialog', () => {
     expect(api.connections.saveConnectionPrefs).toHaveBeenCalledWith('ssh:prod', {}, [
       { id: 'b1', connId: 'ssh:prod', path: '/srv/logs', pinned: true },
       { id: '', connId: 'ssh:prod', path: '/var/www' },
+    ]);
+  });
+
+  it('asks before removing a bookmark, and Keep cancels', () => {
+    seed({ bookmarks: [logs, tmp] });
+    show('ssh:prod');
+
+    click(button('Remove bookmark Scratch'));
+    expect(button('Remove')).toBeDefined();
+    expect(host.textContent).toContain('/tmp');
+    click(button('Keep'));
+
+    expect(button('Remove')).toBeUndefined();
+    expect(button('Remove bookmark Scratch')).toBeDefined();
+    expect(host.querySelector('input[aria-label="Name for /tmp"]')).not.toBeNull();
+    expect(option('prod').textContent).not.toContain('edited');
+
+    click(button('Remove bookmark Scratch'));
+    click(button('Remove'));
+    expect(host.querySelector('input[aria-label="Name for /tmp"]')).toBeNull();
+    expect(option('prod').textContent).toContain('edited');
+  });
+
+  it('offers Home folder and the draft’s bookmarks to open at, and saves the choice', async () => {
+    seed({ bookmarks: [logs, tmp] });
+    show('ssh:prod');
+    const openAt = field('Open at') as HTMLSelectElement;
+    expect([...openAt.options].map((o) => [o.value, o.textContent])).toEqual([
+      ['', 'Home folder'],
+      ['/srv/logs', 'logs — /srv/logs'],
+      ['/tmp', 'Scratch — /tmp'],
+    ]);
+
+    choose(openAt, '/tmp');
+    expect(host.textContent).toContain('Opens here');
+    await clickAsync(button('Save'));
+
+    expect(api.connections.saveConnectionPrefs).toHaveBeenCalledWith(
+      'ssh:prod',
+      { openAt: '/tmp' },
+      [
+        { id: 'b1', connId: 'ssh:prod', path: '/srv/logs' },
+        { id: 'b2', connId: 'ssh:prod', path: '/tmp', name: 'Scratch' },
+      ]
+    );
+  });
+
+  it('opens at a bookmark added in the same draft', () => {
+    show('ssh:prod');
+    type(
+      host.querySelector<HTMLInputElement>('input[aria-label="Folder to bookmark"]')!,
+      '/var/www'
+    );
+    click(button('Add'));
+    const openAt = field('Open at') as HTMLSelectElement;
+    expect([...openAt.options].map((o) => o.value)).toEqual(['', '/var/www']);
+  });
+
+  it('resets Open at to Home folder when its bookmark is removed', async () => {
+    seed({ bookmarks: [logs, tmp], prefs: { 'ssh:prod': { openAt: '/tmp' } } });
+    show('ssh:prod');
+    expect((field('Open at') as HTMLSelectElement).value).toBe('/tmp');
+    expect(host.textContent).toContain('Opens here');
+
+    click(button('Remove bookmark Scratch'));
+    click(button('Remove'));
+
+    expect((field('Open at') as HTMLSelectElement).value).toBe('');
+    expect(host.textContent).not.toContain('Opens here');
+    await clickAsync(button('Save'));
+    expect(api.connections.saveConnectionPrefs).toHaveBeenCalledWith('ssh:prod', {}, [
+      { id: 'b1', connId: 'ssh:prod', path: '/srv/logs' },
     ]);
   });
 

@@ -31,7 +31,7 @@ func TestHostsPrefsAndBookmarksSurviveReopen(t *testing.T) {
 		t.Fatalf("saved host = %+v", h)
 	}
 	show := true
-	prefs := Prefs{Color: ColorOrange, OpenAt: "/var/www", Transfers: 3, ShowHidden: &show, HideInPicker: true}
+	prefs := Prefs{Color: ColorOrange, OpenAt: "/srv/app", Transfers: 3, ShowHidden: &show, HideInPicker: true, Favorite: true}
 	if err := s.SetConnection(h.ConnID, prefs, []Bookmark{{Path: "/srv/app", Name: "app", Pinned: true}}); err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +126,7 @@ func TestChangingASavedHostsAddressMovesItsPrefsAndBookmarks(t *testing.T) {
 	t.Parallel()
 	s := open(t, t.TempDir())
 	h, _ := s.SaveHost(Host{Name: "box", Host: "old.lan"})
-	if err := s.SetConnection(h.ConnID, Prefs{OpenAt: "/srv"}, []Bookmark{{Path: "/srv/logs"}}); err != nil {
+	if err := s.SetConnection(h.ConnID, Prefs{OpenAt: "/srv/logs"}, []Bookmark{{Path: "/srv/logs"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -139,7 +139,7 @@ func TestChangingASavedHostsAddressMovesItsPrefsAndBookmarks(t *testing.T) {
 	if _, ok := d.Prefs["ssh:old.lan"]; ok {
 		t.Fatal("prefs left under the old ID")
 	}
-	if d.Prefs["ssh:new.lan:2200"].OpenAt != "/srv" {
+	if d.Prefs["ssh:new.lan:2200"].OpenAt != "/srv/logs" {
 		t.Fatalf("prefs = %+v", d.Prefs)
 	}
 	if len(d.Bookmarks) != 1 || d.Bookmarks[0].ConnID != "ssh:new.lan:2200" {
@@ -208,8 +208,9 @@ func TestInvalidPrefsAndBookmarksAreRejected(t *testing.T) {
 		prefs     Prefs
 		bookmarks []Bookmark
 	}{
-		{name: "unknown colour", prefs: Prefs{Color: "teal"}},
-		{name: "relative open-at", prefs: Prefs{OpenAt: "var/www"}},
+		{name: "unknown color", prefs: Prefs{Color: "teal"}},
+		{name: "relative open-at", prefs: Prefs{OpenAt: "var/www"}, bookmarks: []Bookmark{{Path: "/var/www"}}},
+		{name: "open-at that isn't a bookmark", prefs: Prefs{OpenAt: "/var/www"}, bookmarks: []Bookmark{{Path: "/srv"}}},
 		{name: "negative transfers", prefs: Prefs{Transfers: -1}},
 		{name: "too many transfers", prefs: Prefs{Transfers: MaxTransfers + 1}},
 		{name: "relative bookmark", bookmarks: []Bookmark{{Path: "logs"}}},
@@ -231,8 +232,28 @@ func TestInvalidPrefsAndBookmarksAreRejected(t *testing.T) {
 func TestWindowsDrivePathsAreAbsolute(t *testing.T) {
 	t.Parallel()
 	s := open(t, t.TempDir())
-	if err := s.SetConnection("local", Prefs{OpenAt: "C:/Users/joe"}, []Bookmark{{Path: "d:/data"}}); err != nil {
+	if err := s.SetConnection("local", Prefs{OpenAt: "C:/Users/joe"}, []Bookmark{{Path: "C:/Users/joe"}, {Path: "d:/data"}}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestRemovingTheOpenAtBookmarkOpensAtHomeAgain(t *testing.T) {
+	t.Parallel()
+	s := open(t, t.TempDir())
+	if err := s.SetConnection("local", Prefs{OpenAt: "/srv", Color: ColorRed}, []Bookmark{{Path: "/srv"}, {Path: "/tmp"}}); err != nil {
+		t.Fatal(err)
+	}
+	var srv Bookmark
+	for _, b := range s.Data().Bookmarks {
+		if b.Path == "/srv" {
+			srv = b
+		}
+	}
+	if err := s.RemoveBookmark(srv.ID); err != nil {
+		t.Fatal(err)
+	}
+	if p := s.Data().Prefs["local"]; p.OpenAt != "" || p.Color != ColorRed {
+		t.Fatalf("prefs = %+v, want open-at cleared and the color kept", p)
 	}
 }
 

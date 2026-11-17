@@ -31,17 +31,19 @@ export function canBookmark(connId: string | null): boolean {
   return connId !== null && catalogNow().some((c) => c.id === connId);
 }
 
-/** ⌘D: bookmarks the pane's folder, or removes its bookmark when it has one. */
+/** ⌘D: bookmarks the pane's folder, or asks to remove its bookmark when it has one. */
 export async function toggleBookmark(paneId: PaneId): Promise<void> {
   const { connId, path } = usePanes.getState().panes[paneId];
   if (connId === null) return;
-  const { bookmarks, addBookmark, removeBookmark } = useConnections.getState();
+  const { bookmarks, addBookmark } = useConnections.getState();
   const existing = bookmarkAt(bookmarks, connId, path);
+  if (existing) {
+    useUi.getState().openDialog({ kind: 'removeBookmark', bookmark: existing });
+    return;
+  }
   try {
-    if (existing) await removeBookmark(existing.id);
-    else await addBookmark(connId, path);
+    await addBookmark(connId, path);
   } catch (e) {
-    const title = existing ? 'Couldn’t remove bookmark' : 'Couldn’t add bookmark';
-    useUi.getState().showError(title, toAppError(e));
+    useUi.getState().showError('Couldn’t add bookmark', toAppError(e));
   }
 }

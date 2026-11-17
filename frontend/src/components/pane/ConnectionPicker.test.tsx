@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { type Root, createRoot } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Kind, TargetKind } from '../../api/enums';
+import { Color, Kind, TargetKind } from '../../api/enums';
 import { useConnections } from '../../stores/connections';
 import { usePanes } from '../../stores/panes';
 import { useUi } from '../../stores/ui';
@@ -30,33 +30,105 @@ afterEach(() => {
   host.remove();
 });
 
-function renderPicker() {
-  act(() => root.render(<ConnectionPicker paneId="left" />));
-  return host.querySelector('select')!;
+const trigger = () => host.querySelector<HTMLButtonElement>('button[aria-label="Connection"]')!;
+const search = () => host.querySelector<HTMLInputElement>('input[role="combobox"]')!;
+const activeName = () =>
+  document.getElementById(search().getAttribute('aria-activedescendant')!)?.textContent;
+const options = () => [...host.querySelectorAll('[role=option]')];
+const names = () => options().map((o) => o.textContent);
+const action = (label: string) =>
+  [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === label)!;
+
+/** Option names by section heading, in display order. */
+function sections() {
+  return [...host.querySelectorAll('[role=group]')].map((g) => ({
+    heading: g.firstElementChild?.textContent,
+    names: [...g.querySelectorAll('[role=option]')].map((o) => o.textContent),
+  }));
 }
 
-describe('ConnectionPicker', () => {
-  it('shows an option for a connection that is in no list and has been dropped', () => {
-    usePanes.setState((s) => ({
-      panes: {
-        ...s.panes,
-        left: {
-          ...s.panes.left,
-          connId: 's3:gone',
+function renderPicker() {
+  act(() => root.render(<ConnectionPicker paneId="left" />));
+}
+
+function openPicker() {
+  renderPicker();
+  act(() => trigger().click());
+}
+
+function press(key: string, target: HTMLElement = search()) {
+  act(() => {
+    target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  });
+}
+
+function type(value: string) {
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(
+      search(),
+      value
+    );
+    search().dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
+
+function pointOnPane(connId: string, lastLabel?: string) {
+  usePanes.setState((s) => ({
+    panes: {
+      ...s.panes,
+      left: {
+        ...s.panes.left,
+        connId,
+        ...(lastLabel !== undefined && {
           lastTarget: {
             target: { kind: TargetKind.TargetS3, profileId: 'gone' },
-            label: 'Archive',
+            label: lastLabel,
           },
-        },
+        }),
       },
-    }));
+    },
+  }));
+}
 
-    const select = renderPicker();
-    expect(select.value).toBe('s3:gone');
-    expect([...select.options].find((o) => o.value === 's3:gone')?.textContent).toBe('Archive');
+const savedHost = (id: string, name: string, connId: string) => ({
+  id,
+  name,
+  host: `${id}.example`,
+  connId,
+});
+
+describe('ConnectionPicker trigger', () => {
+  it('shows Local with no color before the pane connects', () => {
+    renderPicker();
+
+    expect(trigger().textContent).toBe('Local');
+    expect(trigger().querySelector('[title$=" tag"]')).toBeNull();
+    expect(trigger().getAttribute('aria-haspopup')).toBe('listbox');
+    expect(trigger().getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('labels a live quick connection from the connection list', () => {
+  it('shows the pane’s connection name and color', () => {
+    useConnections.setState({
+      profiles: [{ id: 'p1', name: 'Prod bucket' }] as never,
+      prefs: { 's3:p1': { color: Color.ColorRed } },
+    });
+    pointOnPane('s3:p1');
+    renderPicker();
+
+    expect(trigger().textContent).toBe('Prod bucket');
+    expect(trigger().querySelector<HTMLElement>('[title="red tag"]')?.style.backgroundColor).toBe(
+      'var(--tag-red)'
+    );
+  });
+
+  it('names a dropped connection from the pane’s last target', () => {
+    pointOnPane('s3:gone', 'Archive');
+    renderPicker();
+
+    expect(trigger().textContent).toBe('Archive');
+  });
+
+  it('names a live quick connection from the connection list', () => {
     useConnections.setState({
       connections: [
         {
@@ -68,24 +140,24 @@ describe('ConnectionPicker', () => {
         },
       ],
     });
-    usePanes.setState((s) => ({
-      panes: { ...s.panes, left: { ...s.panes.left, connId: 'ssh:me@h:22' } },
-    }));
+    pointOnPane('ssh:me@h:22');
+    renderPicker();
 
-    const select = renderPicker();
-    expect(select.value).toBe('ssh:me@h:22');
-    expect(select.selectedOptions[0]?.textContent).toBe('me@h');
+    expect(trigger().textContent).toBe('me@h');
   });
 
-  it('selects the listed profile when the pane uses it', () => {
-    useConnections.setState({ profiles: [{ id: 'p1', name: 'Prod bucket' } as never] });
-    usePanes.setState((s) => ({
-      panes: { ...s.panes, left: { ...s.panes.left, connId: 's3:p1' } },
-    }));
+  it('opens with ArrowDown and focuses the search field', () => {
+    renderPicker();
 
-    expect(renderPicker().selectedOptions[0]?.textContent).toBe('Prod bucket');
+    press('ArrowDown', trigger());
+
+    expect(trigger().getAttribute('aria-expanded')).toBe('true');
+    expect(document.activeElement).toBe(search());
+    expect(search().placeholder).toBe('Connect to…');
   });
+});
 
+describe('ConnectionPicker list', () => {
   it('lists SSH hosts and S3 profiles in case-insensitive natural order', () => {
     useConnections.setState({
       hosts: ['web10', 'Zeta', 'alpha', 'web2', 'Beta'].map((alias) => ({ alias, source: 'c:1' })),
@@ -94,79 +166,275 @@ describe('ConnectionPicker', () => {
         { id: 'p2', name: 'Archive' },
       ] as never,
     });
+    openPicker();
 
-    const select = renderPicker();
-    const group = (label: string) =>
-      [...select.querySelectorAll(`optgroup[label="${label}"] option`)].map((o) => o.textContent);
-    expect(group('SSH hosts')).toEqual(['alpha', 'Beta', 'web2', 'web10', 'Zeta']);
-    expect(group('S3')).toEqual(['Archive', 'logs']);
+    expect(sections()).toEqual([
+      { heading: 'Local', names: ['Local'] },
+      { heading: 'SSH hosts', names: ['alpha', 'Beta', 'web2', 'web10', 'Zeta'] },
+      { heading: 'S3', names: ['Archive', 'logs'] },
+    ]);
   });
 
-  it('lists saved hosts with config aliases and leaves out hidden connections', () => {
+  it('lists favorites first and does not repeat them in their own group', () => {
     useConnections.setState({
       hosts: [{ alias: 'web', source: 'c:1' }],
+      savedHosts: [savedHost('h1', 'Alpha box', 'ssh:a.example')],
+      profiles: [{ id: 'p1', name: 'Prod bucket' }] as never,
+      prefs: { 's3:p1': { favorite: true }, 'ssh:web': { favorite: true } },
+    });
+    openPicker();
+
+    expect(sections()).toEqual([
+      { heading: 'Favorites', names: ['web', 'Prod bucket'] },
+      { heading: 'Local', names: ['Local'] },
+      { heading: 'SSH hosts', names: ['Alpha box'] },
+    ]);
+  });
+
+  it('keeps hidden connections out until Show reveals them dimmed', () => {
+    useConnections.setState({
       savedHosts: [
-        { id: 'h1', name: 'Alpha box', host: 'a.example', connId: 'ssh:a.example' },
-        { id: 'h2', name: 'Secret box', host: 's.example', connId: 'ssh:s.example' },
+        savedHost('h1', 'Alpha box', 'ssh:a.example'),
+        savedHost('h2', 'Secret box', 'ssh:s.example'),
       ],
       profiles: [{ id: 'p1', name: 'Quiet bucket' }] as never,
-      prefs: {
-        'ssh:s.example': { hideInPicker: true },
-        's3:p1': { hideInPicker: true },
-      },
+      prefs: { 'ssh:s.example': { hideInPicker: true }, 's3:p1': { hideInPicker: true } },
     });
+    openPicker();
 
-    const select = renderPicker();
-    const group = (label: string) =>
-      [...select.querySelectorAll(`optgroup[label="${label}"] option`)].map((o) => o.textContent);
-    expect(group('SSH hosts')).toEqual(['Alpha box', 'web']);
-    expect(select.querySelector('optgroup[label="S3"]')).toBeNull();
+    expect(names()).toEqual(['Local', 'Alpha box']);
+    expect(host.querySelector('[data-hidden="true"]')).toBeNull();
+
+    act(() => action('2 hidden · Show').click());
+
+    expect(sections()).toEqual([
+      { heading: 'Local', names: ['Local'] },
+      { heading: 'SSH hosts', names: ['Alpha box', 'Secret box'] },
+      { heading: 'S3', names: ['Quiet bucket'] },
+    ]);
+    expect([...host.querySelectorAll('[data-hidden="true"]')].map((o) => o.textContent)).toEqual([
+      'Secret box',
+      'Quiet bucket',
+    ]);
+    expect(action('2 hidden · Hide')).toBeDefined();
+    expect(document.activeElement).toBe(search());
   });
 
-  it('keeps a hidden connection selectable while the pane is on it', () => {
+  it('shows no footer when nothing is hidden', () => {
+    openPicker();
+
+    expect(
+      [...host.querySelectorAll('button')].some((b) => /hidden/.test(b.textContent ?? ''))
+    ).toBe(false);
+  });
+
+  it('lists a hidden connection first while the pane is on it', () => {
     useConnections.setState({
-      savedHosts: [{ id: 'h2', name: 'Secret box', host: 's.example', connId: 'ssh:s.example' }],
+      savedHosts: [savedHost('h2', 'Secret box', 'ssh:s.example')],
       prefs: { 'ssh:s.example': { hideInPicker: true } },
     });
-    usePanes.setState((s) => ({
-      panes: { ...s.panes, left: { ...s.panes.left, connId: 'ssh:s.example' } },
-    }));
+    pointOnPane('ssh:s.example');
+    openPicker();
 
-    expect(renderPicker().selectedOptions[0]?.textContent).toBe('Secret box');
+    expect(names()).toEqual(['Secret box', 'Local']);
+    expect(options()[0]?.getAttribute('aria-selected')).toBe('true');
   });
 
-  it('connects to a chosen saved host', async () => {
-    const connect = vi.spyOn(usePanes.getState(), 'connectTo').mockResolvedValue(true);
-    useConnections.setState({
-      savedHosts: [
-        { id: 'h1', name: 'Alpha box', user: 'me', host: 'a.example', connId: 'ssh:me@a.example' },
-      ],
-    });
-    const select = renderPicker();
+  it('lists an unsaved quick connection first and marks it current', () => {
+    pointOnPane('s3:gone', 'Archive');
+    openPicker();
 
-    act(() => choose(select, 'ssh:me@a.example'));
-
-    expect(connect).toHaveBeenCalledWith(
-      'left',
-      { kind: 'ssh', user: 'me', host: 'a.example' },
-      'Alpha box'
-    );
+    expect(names()).toEqual(['Archive', 'Local']);
+    expect(options().map((o) => o.getAttribute('aria-selected'))).toEqual(['true', 'false']);
   });
 
-  it('opens the connections dialog on the pane’s connection', () => {
+  it('marks only the pane’s connection as selected', () => {
     useConnections.setState({ profiles: [{ id: 'p1', name: 'Prod' }] as never });
-    usePanes.setState((s) => ({
-      panes: { ...s.panes, left: { ...s.panes.left, connId: 's3:p1' } },
-    }));
-    const select = renderPicker();
+    pointOnPane('s3:p1');
+    openPicker();
 
-    act(() => choose(select, '__manage'));
+    const selected = options().filter((o) => o.getAttribute('aria-selected') === 'true');
+    expect(selected.map((o) => o.textContent)).toEqual(['Prod']);
+  });
 
-    expect(useUi.getState().dialog).toEqual({ kind: 'connections', connId: 's3:p1' });
+  it('shows why SSH is unavailable as a row that cannot be chosen', () => {
+    useConnections.setState({ sshUnavailable: 'ssh not found' });
+    openPicker();
+
+    expect(sections().map((s) => s.heading)).toEqual(['Local', 'SSH hosts']);
+    expect(host.textContent).toContain('ssh not found');
+    expect(names()).toEqual(['Local']);
   });
 });
 
-function choose(select: HTMLSelectElement, value: string) {
-  select.value = value;
-  select.dispatchEvent(new Event('change', { bubbles: true }));
-}
+describe('ConnectionPicker filter', () => {
+  beforeEach(() => {
+    useConnections.setState({
+      hosts: [{ alias: 'web', source: 'c:1' }],
+      savedHosts: [savedHost('h1', 'Café box', 'ssh:c.example')],
+      profiles: [{ id: 'p1', name: 'Prod bucket' }] as never,
+    });
+  });
+
+  it('narrows the list and drops sections with no match', () => {
+    openPicker();
+
+    type('prod');
+
+    expect(sections()).toEqual([{ heading: 'S3', names: ['Prod bucket'] }]);
+  });
+
+  it('ignores case and accents', () => {
+    openPicker();
+
+    type('CAFE');
+
+    expect(names()).toEqual(['Café box']);
+  });
+
+  it('says so when nothing matches', () => {
+    openPicker();
+
+    type('zzzz');
+
+    expect(options()).toEqual([]);
+    expect(host.textContent).toContain('No matching connections');
+  });
+
+  it('connects to the first match with Enter', () => {
+    const connect = vi.spyOn(usePanes.getState(), 'connectTo').mockResolvedValue(true);
+    openPicker();
+
+    type('prod');
+    press('Enter');
+
+    expect(connect).toHaveBeenCalledWith('left', { kind: 's3', profileId: 'p1' }, 'Prod bucket');
+  });
+});
+
+describe('ConnectionPicker keyboard and pointer', () => {
+  beforeEach(() => {
+    useConnections.setState({
+      hosts: ['alpha', 'beta'].map((alias) => ({ alias, source: 'c:1' })),
+    });
+  });
+
+  it('connects to the next option with ArrowDown and Enter, then closes', () => {
+    const connect = vi.spyOn(usePanes.getState(), 'connectTo').mockResolvedValue(true);
+    openPicker();
+
+    press('ArrowDown');
+    press('Enter');
+
+    expect(connect).toHaveBeenCalledTimes(1);
+    expect(connect).toHaveBeenCalledWith('left', { kind: 'ssh', alias: 'alpha' }, 'alpha');
+    expect(options()).toEqual([]);
+    expect(document.activeElement).toBe(trigger());
+  });
+
+  it('points aria-activedescendant at the active option and wraps', () => {
+    openPicker();
+    expect(activeName()).toBe('Local');
+    press('ArrowDown');
+    expect(activeName()).toBe('alpha');
+    press('End');
+    expect(activeName()).toBe('Manage connections…');
+    press('ArrowDown');
+    expect(activeName()).toBe('Local');
+    press('ArrowUp');
+    expect(activeName()).toBe('Manage connections…');
+    press('Home');
+    expect(activeName()).toBe('Local');
+  });
+
+  it('starts on the pane’s own connection', () => {
+    pointOnPane('ssh:beta');
+    openPicker();
+
+    const active = document.getElementById(search().getAttribute('aria-activedescendant')!);
+    expect(active?.textContent).toBe('beta');
+  });
+
+  it('does not reconnect to the connection the pane is already on', () => {
+    const connect = vi.spyOn(usePanes.getState(), 'connectTo').mockResolvedValue(true);
+    pointOnPane('ssh:beta');
+    openPicker();
+
+    press('Enter');
+
+    expect(connect).not.toHaveBeenCalled();
+    expect(options()).toEqual([]);
+  });
+
+  it('runs an action reached with the arrow keys', () => {
+    openPicker();
+
+    press('ArrowUp');
+    press('Enter');
+
+    expect(useUi.getState().dialog).toEqual({ kind: 'connections' });
+  });
+
+  it('connects to a clicked row', () => {
+    const connect = vi.spyOn(usePanes.getState(), 'connectTo').mockResolvedValue(true);
+    openPicker();
+
+    act(() => (options().find((o) => o.textContent === 'beta') as HTMLElement).click());
+
+    expect(connect).toHaveBeenCalledWith('left', { kind: 'ssh', alias: 'beta' }, 'beta');
+    expect(options()).toEqual([]);
+  });
+
+  it('closes on Escape and returns focus to the trigger', () => {
+    openPicker();
+
+    press('Escape');
+
+    expect(options()).toEqual([]);
+    expect(trigger().getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(trigger());
+  });
+
+  it('closes on Tab', () => {
+    openPicker();
+
+    press('Tab');
+
+    expect(options()).toEqual([]);
+  });
+
+  it('closes on a press outside and toggles from the trigger', () => {
+    openPicker();
+
+    act(() => {
+      document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    });
+    expect(options()).toEqual([]);
+
+    act(() => trigger().click());
+    expect(options().length).toBeGreaterThan(0);
+    act(() => trigger().click());
+    expect(options()).toEqual([]);
+  });
+});
+
+describe('ConnectionPicker actions', () => {
+  it('opens the connections dialog on the pane’s connection', () => {
+    useConnections.setState({ profiles: [{ id: 'p1', name: 'Prod' }] as never });
+    pointOnPane('s3:p1');
+    openPicker();
+
+    act(() => action('Manage connections…').click());
+
+    expect(useUi.getState().dialog).toEqual({ kind: 'connections', connId: 's3:p1' });
+    expect(options()).toEqual([]);
+  });
+
+  it('opens quick connect for the pane', () => {
+    openPicker();
+
+    act(() => action('Quick connect…').click());
+
+    expect(useUi.getState().dialog).toEqual({ kind: 'quickConnect', paneId: 'left' });
+  });
+});

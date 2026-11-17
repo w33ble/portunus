@@ -54,7 +54,7 @@
   background: var(--selection);
 }
 
-/* Dimmed with a quieter colour, not opacity, so the text keeps its contrast. */
+/* Dimmed with a quieter color, not opacity, so the text keeps its contrast. */
 .row[data-hidden='true']:not([data-selected='true']) {
   color: var(--text-secondary);
 }
@@ -77,6 +77,12 @@
 .edited {
   flex: none;
   font-size: 12px;
+}
+
+.favoriteMark {
+  display: grid;
+  flex: none;
+  color: var(--accent);
 }
 
 .hiddenMark {
@@ -259,8 +265,25 @@
   white-space: nowrap;
 }
 
-button.pinned {
+button.pinned,
+button.favorite {
   color: var(--accent);
+}
+
+.badge {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.confirmRow {
+  display: flex;
+  flex: none;
+  gap: 6px;
 }
 
 .addBookmark {

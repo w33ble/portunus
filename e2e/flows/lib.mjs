@@ -44,6 +44,16 @@ export async function flow(name, fn, { engine = 'chromium' } = {}) {
       await input.fill(p);
       await input.press('Enter');
     },
+    /** Opens a pane's connection picker and picks a connection by name, or an action ending in "…". */
+    pick: async (pane, name) => {
+      await pane.getByRole('button', { name: 'Connection', exact: true }).click();
+      const list = page.getByRole('listbox', { name: 'Connect to' });
+      await list.waitFor();
+      if (name.endsWith('…')) await page.getByRole('button', { name, exact: true }).click();
+      else await list.getByRole('option', { name, exact: true }).click();
+    },
+    /** The connection name a pane's picker shows. */
+    current: (pane) => pane.getByRole('button', { name: 'Connection', exact: true }).innerText(),
   };
 
   try {

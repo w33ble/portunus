@@ -10,7 +10,7 @@ import (
 const ThemeScriptRoute = "/theme.js"
 
 // ThemeService serves a script that applies the saved theme. index.html loads it as a blocking
-// script in <head>, so the first paint already has the theme's colours.
+// script in <head>, so the first paint already has the theme's colors.
 type ThemeService struct {
 	app *App
 }

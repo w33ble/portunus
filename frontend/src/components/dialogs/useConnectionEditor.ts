@@ -16,6 +16,7 @@ import {
   normalizeBookmarks,
   normalizePrefs,
   validateHostFields,
+  withBookmarks,
 } from '../../lib/connectionDraft';
 import { profileFromForm, secretFor, validateS3Form } from '../../lib/s3Form';
 import { catalogNow, useCatalog, useConnections } from '../../stores/connections';
@@ -194,7 +195,7 @@ export function useConnectionEditor(
         setState({ key: saved, draft: { ...draft, identity: next }, from: null });
       await store.savePrefs(
         saved,
-        normalizePrefs(draft.prefs),
+        normalizePrefs(draft.prefs, draft.bookmarks),
         normalizeBookmarks(draft.bookmarks)
       );
       edit(openNow(saved));
@@ -230,7 +231,7 @@ export function useConnectionEditor(
     add: (kind) => guard(() => edit(openNow(kind === 'host' ? NEW_HOST_KEY : NEW_S3_KEY))),
     setIdentity: (identity) => change({ ...draft, identity }),
     setPrefs: (patch) => change({ ...draft, prefs: { ...draft.prefs, ...patch } }),
-    setBookmarks: (next) => change({ ...draft, bookmarks: next }),
+    setBookmarks: (next) => change(withBookmarks(draft, next)),
     revert: () => edit({ key, draft: base }),
     save,
     async remove() {

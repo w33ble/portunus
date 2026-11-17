@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import { Color } from '../../api/enums';
-import type { Prefs } from '../../api/types';
+import type { Bookmark, Prefs } from '../../api/types';
+import { bookmarkLabel } from '../../lib/catalog';
 import { useSettings } from '../../stores/settings';
 import controls from '../ui/controls.module.css';
 import { Select } from '../ui/Select';
@@ -21,11 +22,13 @@ function showHiddenValue(value: boolean | null | undefined): string {
 
 interface Props {
   prefs: Prefs;
+  /** The draft's bookmarks: the only folders a connection can open at. */
+  bookmarks: readonly Bookmark[];
   onChange: (patch: Partial<Prefs>) => void;
 }
 
 /** App-side settings every connection has, including Local and ~/.ssh/config hosts. */
-export function ConnectionPrefsFields({ prefs, onChange }: Props) {
+export function ConnectionPrefsFields({ prefs, bookmarks, onChange }: Props) {
   const name = useId();
   const settings = useSettings((s) => s.settings);
   const globalLimit = settings?.globalTransfers ?? 1;
@@ -36,7 +39,7 @@ export function ConnectionPrefsFields({ prefs, onChange }: Props) {
   return (
     <div className={styles.fields}>
       <fieldset className={styles.fieldset}>
-        <legend>Colour tag</legend>
+        <legend>Color tag</legend>
         <div className={styles.swatches}>
           {COLORS.map(({ value, label }) => (
             <input
@@ -56,14 +59,14 @@ export function ConnectionPrefsFields({ prefs, onChange }: Props) {
 
       <label className={controls.label}>
         Open at
-        <input
-          className={controls.field}
-          value={prefs.openAt ?? ''}
-          placeholder="Home folder"
-          spellCheck={false}
-          autoCapitalize="off"
-          onChange={(e) => onChange({ openAt: e.target.value })}
-        />
+        <Select value={prefs.openAt ?? ''} onChange={(e) => onChange({ openAt: e.target.value })}>
+          <option value="">Home folder</option>
+          {bookmarks.map((b) => (
+            <option key={b.path} value={b.path}>
+              {bookmarkLabel(b)} — {b.path}
+            </option>
+          ))}
+        </Select>
       </label>
 
       <div className={styles.pair}>

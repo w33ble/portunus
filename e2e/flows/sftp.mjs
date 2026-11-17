@@ -12,7 +12,7 @@ import { flow, assert, sameFile, count, previewFixtures, E2E_DIR, HOME } from '.
 const REMOTE = `${E2E_DIR}/remote`;
 
 await flow('sftp', async (ctx) => {
-  const { page, left, right, row, step, shot, goTo, shiftDrag } = ctx;
+  const { page, left, right, row, step, shot, goTo, shiftDrag, pick } = ctx;
   await row(left, 'Documents').dblclick();
   await row(left, 'hello.txt').waitFor();
 
@@ -25,7 +25,7 @@ await flow('sftp', async (ctx) => {
   await page.getByRole('tab', { name: /browser/i }).click();
 
   step('connect to testbox and trust host key');
-  await right.getByLabel('Connection').selectOption('ssh:testbox');
+  await pick(right, 'testbox');
   const trust = page.getByRole('button', { name: /trust/i });
   await trust.waitFor({ timeout: 15000 });
   await shot('hostkey');

@@ -76,15 +76,16 @@ export function draftFor(conn: KnownConnection, saved: SavedState): Draft {
   }
 }
 
-/** Prefs as the backend stores them: unset fields are absent, not empty. */
-export function normalizePrefs(p: Prefs): Prefs {
-  const openAt = (p.openAt ?? '').trim();
+/** Prefs as the backend stores them: unset fields are absent, and open-at must be a bookmark. */
+export function normalizePrefs(p: Prefs, bookmarks: readonly Bookmark[]): Prefs {
+  const openAt = p.openAt && bookmarks.some((b) => b.path === p.openAt) ? p.openAt : '';
   return {
     ...(p.color && { color: p.color }),
     ...(openAt && { openAt }),
     ...(p.transfers && { transfers: p.transfers }),
     ...(p.showHidden != null && { showHidden: p.showHidden }),
     ...(p.hideInPicker && { hideInPicker: true }),
+    ...(p.favorite && { favorite: true }),
   };
 }
 
@@ -101,14 +102,27 @@ export function normalizeBookmarks(list: readonly Bookmark[]): Bookmark[] {
   });
 }
 
+/** The draft with these bookmarks; open-at falls back to the home folder if its bookmark is gone. */
+export function withBookmarks(draft: Draft, bookmarks: Bookmark[]): Draft {
+  const { openAt, ...rest } = draft.prefs;
+  const keep = openAt !== undefined && bookmarks.some((b) => b.path === openAt);
+  return { ...draft, bookmarks, prefs: keep ? draft.prefs : rest };
+}
+
 export function identityChanged(base: Draft, draft: Draft): boolean {
   return JSON.stringify(base.identity) !== JSON.stringify(draft.identity);
 }
 
 export function prefsChanged(base: Draft, draft: Draft): boolean {
   return (
-    JSON.stringify([normalizePrefs(base.prefs), normalizeBookmarks(base.bookmarks)]) !==
-    JSON.stringify([normalizePrefs(draft.prefs), normalizeBookmarks(draft.bookmarks)])
+    JSON.stringify([
+      normalizePrefs(base.prefs, base.bookmarks),
+      normalizeBookmarks(base.bookmarks),
+    ]) !==
+    JSON.stringify([
+      normalizePrefs(draft.prefs, draft.bookmarks),
+      normalizeBookmarks(draft.bookmarks),
+    ])
   );
 }
 
