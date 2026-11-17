@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Portunus is a dual-pane file transfer desktop app: each pane is local disk, an SFTP host (from `~/.ssh/config`) or an S3 bucket, and files move between panes by drag, drop or F5. Built on Wails v3: Go backend, React 19 + TypeScript frontend. macOS first, Linux supported, Windows untested. `docs/mvp-plan.md` is the frozen design record; its **Deviations** and **Decisions** sections hold later changes.
+Portunus is a dual-pane file transfer desktop app: each pane is local disk, an SFTP host (from `~/.ssh/config`) or an S3 bucket, and files move between panes by drag, drop or F5. Built on Wails v3: Go backend, React 19 + TypeScript frontend. macOS first, Linux supported, Windows untested. `docs/design.md` is the design record: how the code is put together and why. Keep it current when a design decision changes.
 
 ## Architecture & Data Flow
 
@@ -52,6 +52,7 @@ React (frontend/src) ──api/ wrappers──▶ generated bindings ──▶ i
 | `frontend/src/lib/` | Pure helpers (selection, sort, history, listing, match/type-ahead, paths, tabStops, syntax) |
 | `frontend/src/components/{pane,dialogs,shell,transfers,ui}` | UI; `ui/Modal.tsx` and `ui/controls.module.css` are shared |
 | `e2e/` | Playwright flows against a server-mode build, real sshd and RustFS (Docker) |
+| `frontend/demo/` | Demo build of the real frontend with a fake `api` (module swap in `demo/vite.config.ts`) and sample data; `mise run docs:screenshots` captures the README images into `docs/screenshots/` |
 | `build/` | Wails Taskfiles, platform metadata (Info.plist, nfpm), icons, release scripts |
 
 Generated and gitignored: `frontend/bindings/`, `frontend/dist/`, `bin/`, `THIRD_PARTY_NOTICES.md`.
@@ -70,6 +71,7 @@ mise run test:race       # CGO_ENABLED=1, needs a C compiler
 mise run lint:gohawk     # concurrency and resource-lifetime analysis
 mise run e2e             # Linux + Docker + /usr/sbin/sshd
 mise run build           # cgo build -> bin/portunus
+mise run docs:screenshots  # README screenshots from the demo build (Docker)
 ```
 
 - **Go needs a frontend build first**: `main.go` embeds `all:frontend/dist`, so Go can't compile until `frontend:build` has run. That's why `lint`/`test`/`check` depend on it, and `frontend:build` in turn depends on `bindings`.
@@ -106,7 +108,7 @@ mise run build           # cgo build -> bin/portunus
 - **PR body**: first line `Fixes #N` (or `Refs #N` for follow-ups), then `## Summary`, `## Verification` (only checks that were actually run), and `## Still to verify on macOS` for things that need the native window.
 - **Issues**: bugs use **Cause / Fix / Acceptance**; enhancements use **Proposal or Options / Acceptance**.
 - **Screenshots**: commit them to the `pr-assets` branch and link `…/blob/pr-assets/<dir>/<file>.png?raw=true`.
-- **Docs to keep in sync**: update the README **Features**, **Install**, **Tests** and **CI** sections when behaviour changes. The README **Install** section mirrors the release-notes template in `.github/workflows/release.yml`. Record deliberate design departures under **Deviations** in `docs/mvp-plan.md`.
+- **Docs to keep in sync**: update the README **Features**, **Install**, **Tests** and **CI** sections when behavior changes. The README **Install** section mirrors the release-notes template in `.github/workflows/release.yml`. Update `docs/design.md` when a design decision changes.
 
 ## Important Files
 
@@ -140,7 +142,7 @@ mise run build           # cgo build -> bin/portunus
 | e2e subset | `E2E_FLOWS="layout dialogs" mise run e2e` |
 
 - **Go**:
-  - **Style**: `t.Parallel()`, `t.Context()` and `t.TempDir()` everywhere. Test names are behavioural sentences (`TestCancelMidFileLeavesNoTargetAndClosesBothEnds`). Use table tests with `t.Run`.
+  - **Style**: `t.Parallel()`, `t.Context()` and `t.TempDir()` everywhere. Test names are behavioral sentences (`TestCancelMidFileLeavesNoTargetAndClosesBothEnds`). Use table tests with `t.Run`.
   - **External dependencies**: guard them with `testutil.Unavailable(t, …)`. Real SSH comes from `internal/testutil/sshdtest`; S3 tests start RustFS in `s3fs/s3server_test.go`.
   - **Transfer tests**: use `fakefs_test.go` (an in-memory `vfs.FS` with fault, hook and latency injection) and `harness_test.go` (`newHarness`, `waitFinal`, `assertQuiescent`, `scriptAsker`).
   - **New backends**: call `vfstest.Run` from `TestConformance` with the right `Caps`, rather than writing the same cases by hand.
@@ -154,4 +156,4 @@ mise run build           # cgo build -> bin/portunus
   - **Order matters**: flows share fixtures and app state. `contrast` must run before `s3`, because it checks a connection list without S3 profiles. `connections` sets an open-at bookmark, a color, a favorite and bookmarks, and clears them again so later flows open Local at home.
   - **Contrast**: `contrast.mjs`/`a11y.mjs` run axe `color-contrast` on every dialog, the browser, the Transfers view and highlighted previews in every theme (read from the stylesheets' `[data-theme]` selectors), plus custom floors (disabled 3:1, placeholder 4.5:1, icons 3:1). New dialogs, colors or themes have to pass it.
   - **Appearance**: `appearance` runs last and ends on System, so earlier flows see the default theme.
-- **What good tests look like**: they assert observable behaviour, and a fix comes with a test that fails without it. There's no coverage target. CI runs `check`, `race`, `gohawk` and a cgo build on every PR; e2e runs only after merge to main.
+- **What good tests look like**: they assert observable behavior, and a fix comes with a test that fails without it. There's no coverage target. CI runs `check`, `race`, `gohawk` and a cgo build on every PR; e2e runs only after merge to main.

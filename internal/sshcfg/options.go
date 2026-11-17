@@ -34,7 +34,7 @@ type Options struct {
 	HashKnownHosts        bool
 
 	ProxyJump    string // raw value; "" or "none" means direct
-	ProxyCommand string // non-empty means unsupported in MVP
+	ProxyCommand string // non-empty is refused by sshconn until #70
 
 	ConnectTimeout      time.Duration // 0 = default
 	ServerAliveInterval time.Duration // 0 = default keepalive chosen by sshconn
