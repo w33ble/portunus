@@ -36,12 +36,16 @@ type Config struct {
 	Emit      Emitter
 	Secrets   profiles.SecretStore
 	Logger    *slog.Logger
+	// ThemeChanged, if set, is called with the new theme ID after a save changes it.
+	ThemeChanged func(id string)
 }
 
 // App owns every backend component for one running application.
 type App struct {
 	emit Emitter
 	log  *slog.Logger
+
+	themeChanged func(id string)
 
 	configDir string
 	secrets   profiles.SecretStore
@@ -63,7 +67,7 @@ func New(cfg Config) (*App, error) {
 		log = slog.Default()
 	}
 
-	a := &App{emit: cfg.Emit, log: log, configDir: cfg.ConfigDir, secrets: cfg.Secrets}
+	a := &App{emit: cfg.Emit, log: log, themeChanged: cfg.ThemeChanged, configDir: cfg.ConfigDir, secrets: cfg.Secrets}
 	a.broker = prompt.New(prompt.Emitter(cfg.Emit))
 
 	var err error
@@ -114,6 +118,7 @@ func (a *App) Services() []application.Service {
 		application.NewService(&PromptService{app: a}),
 		application.NewServiceWithOptions(&PreviewService{app: a}, application.ServiceOptions{Route: PreviewRoute}),
 		application.NewService(&SettingsService{app: a}),
+		application.NewServiceWithOptions(&ThemeService{app: a}, application.ServiceOptions{Route: ThemeScriptRoute}),
 		application.NewService(&VersionService{}),
 	}
 }

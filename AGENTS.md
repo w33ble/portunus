@@ -88,7 +88,8 @@ mise run build           # cgo build -> bin/portunus
 - **Formatting and lint**: oxfmt (100 columns, single quotes, trailing commas `es5`); oxlint runs only the correctness and suspicious categories.
 - **Stores**: components read with selectors (or `useShallow`). Event handlers and action functions read `useStore.getState()` to avoid stale closures. Reset a store with `setState(getInitialState(), true)`.
 - **Dialogs**: open with `useUi.getState().openDialog({ kind })`, and add the kind to the `DialogHost` switch. Every dialog renders through `Modal` (native `<dialog>` plus a manual Tab trap, because WKWebView skips buttons when macOS keyboard navigation is off).
-- **Styling**: one CSS Module per component, plus the shared `ui/controls.module.css`. Take every colour from the tokens in `styles.css` (light/dark via `prefers-color-scheme`); code colours are the `--syntax-*` tokens, mapped to `.hljs-*` classes in `PreviewPanel.module.css` with `:global`. Buttons with white text use `--accent-fill`; `--accent` is for rings, icons and text. Global `:focus-visible` draws a box-shadow ring, so a component with its own focus cue overrides it.
+- **Styling**: one CSS Module per component, plus the shared `ui/controls.module.css`. Take every colour from the theme tokens; code colours are the `--syntax-*` tokens, mapped to `.hljs-*` classes in `PreviewPanel.module.css` with `:global`. Buttons with white text use `--accent-fill`; `--accent` is for rings, icons and text. Global `:focus-visible` draws a box-shadow ring, so a component with its own focus cue overrides it.
+- **Themes**: each is a `[data-theme='<id>']` block of tokens in `frontend/src/themes/<family>.css`; `schemes.css` holds what all light or all dark themes share. The root's `data-theme` is set first by `/theme.js` (`services/themesvc.go`, a blocking script in `index.html`) and then by `stores/theme.ts` `followTheme`, which resolves System from `prefers-color-scheme`. A new theme goes in `schemes.css`, its family file, `lib/theme.ts` `THEMES` and `internal/theme` (which sets the native window background); `internal/theme/theme_test.go` checks all four agree. Its upstream license goes in `build/release/palettes/<Name>/LICENSE`.
 - **File list** (`components/pane`): rows are virtualized with TanStack Virtual at a fixed 22 px, with `role="listbox"`/`"option"`. Selection is pruned to visible entries, so filtered-out items drop out. The pane is a CSS size container: columns hide via `@container` below 440px and 320px.
 - **Keyboard**: pane-wide shortcuts (⌘L, ⌘R, ⌘⇧N, ⌘F, history) live in `Pane.tsx`; list keys (arrows, type-ahead, Space, F2, F5, F6, Delete, Tab) live in `useFileListKeys.ts`.
 - **History gestures**: mouse back/forward (`button` 3/4) are handled in `Pane.tsx`. Swipes follow the macOS "Swipe between pages" setting:
@@ -115,7 +116,7 @@ mise run build           # cgo build -> bin/portunus
 | `internal/services/errors.go`, `frontend/src/api/errors.ts` | The two halves of the error model |
 | `frontend/src/api/index.ts` | Every backend call the UI makes |
 | `frontend/src/stores/panes.ts` | Pane model: listing, selection, sort, history, filter |
-| `frontend/src/styles.css` | Theme tokens |
+| `frontend/src/themes/` | Theme tokens, one file per palette family |
 | `mise.toml` | Tool pins and every dev task |
 | `Taskfile.yml`, `build/*/Taskfile.yml` | Version stamping (`PORTUNUS_VERSION`, ldflags into `internal/version`) and packaging |
 | `.github/workflows/{ci,e2e,release}.yml` | CI on PRs; e2e on push to main only; tag `v*` makes a draft release |
@@ -149,5 +150,6 @@ mise run build           # cgo build -> bin/portunus
 - **e2e** (`e2e/flows/*.mjs`):
   - **Writing a flow**: call `flow(name, fn, { engine: 'webkit' | 'chromium' })` from `lib.mjs`. To add one, create the file and add its name to the `E2E_FLOWS` default in `e2e/run.sh`.
   - **Order matters**: flows share fixtures and app state. `contrast` must run before `s3`, because it checks the empty S3-profiles state.
-  - **Contrast**: `contrast.mjs`/`a11y.mjs` run axe `color-contrast` on every dialog and on highlighted previews in light and dark, plus custom floors (disabled 3:1, placeholder 4.5:1, icons 3:1). New dialogs or colours have to pass it.
+  - **Contrast**: `contrast.mjs`/`a11y.mjs` run axe `color-contrast` on every dialog, the browser, the Transfers view and highlighted previews in every theme (read from the stylesheets' `[data-theme]` selectors), plus custom floors (disabled 3:1, placeholder 4.5:1, icons 3:1). New dialogs, colours or themes have to pass it.
+  - **Appearance**: `appearance` runs last and ends on System, so earlier flows see the default theme.
 - **What good tests look like**: they assert observable behaviour, and a fix comes with a test that fails without it. There's no coverage target. CI runs `check`, `race`, `gohawk` and a cgo build on every PR; e2e runs only after merge to main.

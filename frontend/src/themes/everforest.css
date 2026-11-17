@@ -1,0 +1,83 @@
+/*
+ * Everforest (medium) by sainnhe, MIT: https://github.com/sainnhe/everforest
+ * Upstream colours, made lighter or darker only where text would fall below WCAG AA
+ * contrast (4.5:1 for text, 3:1 for icons and disabled controls).
+ */
+
+[data-theme='everforest-light'] {
+  --bg: #fdf6e3;
+  --bg-chrome: #efebd4;
+  --bg-chrome-active: #f4f0d9;
+  --bg-field: #fffbef;
+  --text: #505c64;
+  --text-secondary: #5f6c5e;
+  --text-disabled: #7a8871;
+  --accent: #2f946e;
+  --accent-fill: #277c5c;
+  --accent-text: #fdf6e3;
+  --selection: rgb(53 167 124 / 16%);
+  --selection-strong: #277c5c;
+  --selection-text: #fdf6e3;
+  --danger: #d60c09;
+  --warning: #a54a08;
+  --warning-bg: rgb(223 160 0 / 14%);
+  --success: #637101;
+  --focus-ring: 0 0 0 3px rgb(53 167 124 / 40%);
+  --syntax-keyword: #e00d09;
+  --syntax-string: #677601;
+  --syntax-number: #c72a96;
+  --syntax-comment: #667364;
+  --syntax-title: #677601;
+  --syntax-type: #906700;
+  --syntax-attr: #b75208;
+  --syntax-built-in: #277c5c;
+  --syntax-literal: #c72a96;
+  --syntax-meta: #c72a96;
+  --syntax-variable: #2e769e;
+  --syntax-tag: #b75208;
+  --syntax-section: #2e769e;
+  --syntax-regexp: #277c5c;
+  --syntax-addition: #5e6c01;
+  --syntax-addition-bg: rgb(141 161 1 / 14%);
+  --syntax-deletion: #cc0c08;
+  --syntax-deletion-bg: rgb(248 85 82 / 12%);
+}
+
+[data-theme='everforest-dark'] {
+  --bg: #2d353b;
+  --bg-chrome: #343f44;
+  --bg-chrome-active: #3d484d;
+  --bg-field: #2d353b;
+  --text: #dcd1bb;
+  --text-secondary: #afb8b1;
+  --text-disabled: #8c9890;
+  --accent: #a7c080;
+  --accent-fill: #a7c080;
+  --accent-text: #2d353b;
+  --selection: rgb(167 192 128 / 16%);
+  --selection-strong: #a7c080;
+  --selection-text: #232a2e;
+  --danger: #eda2a4;
+  --warning: #e6d0a5;
+  --warning-bg: rgb(219 188 127 / 16%);
+  --success: #a7c080;
+  --focus-ring: 0 0 0 3px rgb(167 192 128 / 50%);
+  --syntax-keyword: #e68082;
+  --syntax-string: #a7c080;
+  --syntax-number: #d699b6;
+  --syntax-comment: #95a099;
+  --syntax-title: #a7c080;
+  --syntax-type: #dbbc7f;
+  --syntax-attr: #e69875;
+  --syntax-built-in: #83c092;
+  --syntax-literal: #d699b6;
+  --syntax-meta: #d699b6;
+  --syntax-variable: #7fbbb3;
+  --syntax-tag: #e69875;
+  --syntax-section: #7fbbb3;
+  --syntax-regexp: #83c092;
+  --syntax-addition: #a9c283;
+  --syntax-addition-bg: rgb(167 192 128 / 16%);
+  --syntax-deletion: #eda0a2;
+  --syntax-deletion-bg: rgb(230 126 128 / 18%);
+}

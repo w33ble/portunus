@@ -14,13 +14,17 @@ func (s *SettingsService) Get() settings.Settings {
 	return s.app.settings.Get()
 }
 
-// Save persists next and applies transfer limits and SSH options without a restart.
+// Save persists next and applies transfer limits, SSH options and the theme without a restart.
 func (s *SettingsService) Save(next settings.Settings) (settings.Settings, error) {
+	before := s.app.settings.Get()
 	saved, err := s.app.settings.Save(next)
 	if err != nil {
 		return settings.Settings{}, err
 	}
 	s.app.applySettings(saved)
+	if saved.Theme != before.Theme && s.app.themeChanged != nil {
+		s.app.themeChanged(saved.Theme)
+	}
 	return saved, nil
 }
 

@@ -33,15 +33,16 @@
   border: 0;
   border-radius: calc(var(--radius) - 2px);
   background: transparent;
-  color: var(--text-secondary);
+  /* Primary text on every segment: secondary text on the pressed track misses 4.5:1 in most themes. */
+  color: var(--text);
   cursor: default;
-  transition-property: background-color, color, box-shadow;
+  transition-property: background-color, box-shadow;
   transition-duration: 120ms;
   transition-timing-function: ease-out;
 }
 
 .tab:hover:not([data-active='true']) {
-  color: var(--text);
+  background: var(--bg-hover);
 }
 
 .tab[data-active='true'] {

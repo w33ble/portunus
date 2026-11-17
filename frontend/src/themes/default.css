@@ -1,0 +1,80 @@
+/* Portunus's own palette, after the macOS system colours. */
+
+:root,
+[data-theme='light'] {
+  --bg: #ffffff;
+  --bg-chrome: #ececec;
+  --bg-chrome-active: #f6f6f6;
+  --bg-field: #ffffff;
+  --text: #1d1d1f;
+  --text-secondary: #66666b;
+  --text-disabled: #85858a;
+  --accent: #007aff;
+  --accent-fill: #0071e3;
+  --accent-text: #ffffff;
+  --selection: rgb(0 122 255 / 16%);
+  --selection-strong: #0a62d0;
+  --selection-text: #ffffff;
+  --danger: #d70015;
+  --warning: #a34800;
+  --warning-bg: rgb(255 159 10 / 14%);
+  --success: #218039;
+  --focus-ring: 0 0 0 3px rgb(0 122 255 / 40%);
+  --syntax-keyword: #cf222e;
+  --syntax-string: #0a3069;
+  --syntax-number: #0550ae;
+  --syntax-comment: #6a737d;
+  --syntax-title: #8250df;
+  --syntax-type: #953800;
+  --syntax-attr: #116329;
+  --syntax-built-in: #0550ae;
+  --syntax-literal: #0550ae;
+  --syntax-meta: #6639ba;
+  --syntax-variable: #953800;
+  --syntax-tag: #116329;
+  --syntax-section: #0550ae;
+  --syntax-regexp: #116329;
+  --syntax-addition: #116329;
+  --syntax-addition-bg: rgb(74 194 107 / 20%);
+  --syntax-deletion: #82071e;
+  --syntax-deletion-bg: rgb(255 129 130 / 20%);
+}
+
+[data-theme='dark'] {
+  --bg: #1e1e1e;
+  --bg-chrome: #2a2a2c;
+  --bg-chrome-active: #353537;
+  --bg-field: #2c2c2e;
+  --text: #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --text-disabled: #808085;
+  --accent: #0a84ff;
+  --accent-fill: #0a6fdc;
+  --accent-text: #ffffff;
+  --selection: rgb(10 132 255 / 28%);
+  --selection-strong: #0a5fd0;
+  --selection-text: #ffffff;
+  --danger: #ff7a72;
+  --warning: #ffb340;
+  --warning-bg: rgb(255 159 10 / 16%);
+  --success: #32d74b;
+  --focus-ring: 0 0 0 3px rgb(10 132 255 / 55%);
+  --syntax-keyword: #ff7b72;
+  --syntax-string: #a5d6ff;
+  --syntax-number: #79c0ff;
+  --syntax-comment: #8b949e;
+  --syntax-title: #d2a8ff;
+  --syntax-type: #ffa657;
+  --syntax-attr: #7ee787;
+  --syntax-built-in: #79c0ff;
+  --syntax-literal: #79c0ff;
+  --syntax-meta: #d2a8ff;
+  --syntax-variable: #ffa657;
+  --syntax-tag: #7ee787;
+  --syntax-section: #79c0ff;
+  --syntax-regexp: #7ee787;
+  --syntax-addition: #7ee787;
+  --syntax-addition-bg: rgb(46 160 67 / 20%);
+  --syntax-deletion: #ffa198;
+  --syntax-deletion-bg: rgb(248 81 73 / 20%);
+}

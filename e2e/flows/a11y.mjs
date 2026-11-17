@@ -66,22 +66,39 @@ function measure(scope) {
   return rows;
 }
 
+/** Every theme the stylesheets define, read from their [data-theme] selectors. */
+function themeIds() {
+  const ids = new Set();
+  const walk = (rules) => {
+    for (const rule of rules) {
+      if (rule.cssRules) walk(rule.cssRules);
+      for (const m of (rule.selectorText ?? '').matchAll(/\[data-theme=["']?([\w-]+)/g)) ids.add(m[1]);
+    }
+  };
+  for (const sheet of document.styleSheets) walk(sheet.cssRules);
+  return [...ids];
+}
+
 /** Collects violations across a whole flow so one run reports every failing dialog. */
 export function contrastAudit(page) {
   const failures = [];
   const report = [];
+  let themes;
 
   return {
     /**
-     * Checks the open dialog (or `scope`) in light and dark. axe covers enabled text; the custom pass
+     * Checks the open dialog (or `scope`) in every theme. axe covers enabled text; the custom pass
      * covers what axe skips, and with `strictText` also enforces the text floor itself.
      */
     async check(label, { scope = 'dialog[open]', strictText = false } = {}) {
-      for (const scheme of ['light', 'dark']) {
-        await page.emulateMedia({ colorScheme: scheme });
+      themes ??= await page.evaluate(themeIds);
+      if (themes.length < 2) throw new Error(`found themes ${themes}, want them all`);
+      const saved = await page.evaluate(() => document.documentElement.dataset.theme);
+      for (const theme of themes) {
+        await page.evaluate((t) => (document.documentElement.dataset.theme = t), theme);
         await page.mouse.move(0, 0);
         await page.waitForTimeout(300); // button background transitions
-        const where = `${label} [${scheme}]`;
+        const where = `${label} [${theme}]`;
         const before = failures.length;
 
         const axe = await new AxeBuilder({ page }).include(scope).withRules(['color-contrast']).analyze();
@@ -94,15 +111,16 @@ export function contrastAudit(page) {
 
         const rows = await page.evaluate(measure, scope);
         for (const r of rows) {
-          report.push({ dialog: label, scheme, ...r });
+          report.push({ dialog: label, theme, ...r });
           if ((strictText || r.kind !== 'text') && r.ratio < MIN[r.kind]) {
             failures.push(`${where}: ${r.kind} “${r.text}” ${r.fg} on ${r.bg} = ${r.ratio}:1 (needs ${MIN[r.kind]})`);
           }
         }
         if (failures.length > before) {
-          await page.screenshot({ path: `/out/contrast-${label.replace(/\W+/g, '-')}-${scheme}.png` });
+          await page.screenshot({ path: `/out/contrast-${label.replace(/\W+/g, '-')}-${theme}.png` });
         }
       }
+      await page.evaluate((t) => (document.documentElement.dataset.theme = t), saved);
     },
 
     /** Writes the full measurement table and throws if anything failed. */

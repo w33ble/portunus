@@ -1,0 +1,83 @@
+/*
+ * Catppuccin, MIT: https://github.com/catppuccin/palette
+ * Upstream colours, made lighter or darker only where text would fall below WCAG AA
+ * contrast (4.5:1 for text, 3:1 for icons and disabled controls).
+ */
+
+[data-theme='catppuccin-latte'] {
+  --bg: #eff1f5;
+  --bg-chrome: #dce0e8;
+  --bg-chrome-active: #e6e9ef;
+  --bg-field: #f8f9fb;
+  --text: #4c4f69;
+  --text-secondary: #5e6174;
+  --text-disabled: #787c91;
+  --accent: #1e66f5;
+  --accent-fill: #145ff5;
+  --accent-text: #eff1f5;
+  --selection: rgb(30 102 245 / 15%);
+  --selection-strong: #145ff5;
+  --selection-text: #eff1f5;
+  --danger: #cd0f38;
+  --warning: #a53c01;
+  --warning-bg: rgb(223 142 29 / 16%);
+  --success: #2f7620;
+  --focus-ring: 0 0 0 3px rgb(30 102 245 / 40%);
+  --syntax-keyword: #8839ef;
+  --syntax-string: #317a20;
+  --syntax-number: #bc4501;
+  --syntax-comment: #686b7e;
+  --syntax-title: #145ff5;
+  --syntax-type: #976014;
+  --syntax-attr: #13777c;
+  --syntax-built-in: #d20f39;
+  --syntax-literal: #bc4501;
+  --syntax-meta: #c51e98;
+  --syntax-variable: #4c4f69;
+  --syntax-tag: #145ff5;
+  --syntax-section: #145ff5;
+  --syntax-regexp: #c51e98;
+  --syntax-addition: #2d701e;
+  --syntax-addition-bg: rgb(64 160 43 / 15%);
+  --syntax-deletion: #bd0d33;
+  --syntax-deletion-bg: rgb(210 15 57 / 12%);
+}
+
+[data-theme='catppuccin-mocha'] {
+  --bg: #1e1e2e;
+  --bg-chrome: #181825;
+  --bg-chrome-active: #313244;
+  --bg-field: #1e1e2e;
+  --text: #cdd6f4;
+  --text-secondary: #a6adc8;
+  --text-disabled: #7f849c;
+  --accent: #89b4fa;
+  --accent-fill: #89b4fa;
+  --accent-text: #1e1e2e;
+  --selection: rgb(137 180 250 / 22%);
+  --selection-strong: #89b4fa;
+  --selection-text: #11111b;
+  --danger: #f38ba8;
+  --warning: #fab387;
+  --warning-bg: rgb(249 226 175 / 14%);
+  --success: #a6e3a1;
+  --focus-ring: 0 0 0 3px rgb(137 180 250 / 50%);
+  --syntax-keyword: #cba6f7;
+  --syntax-string: #a6e3a1;
+  --syntax-number: #fab387;
+  --syntax-comment: #9399b2;
+  --syntax-title: #89b4fa;
+  --syntax-type: #f9e2af;
+  --syntax-attr: #94e2d5;
+  --syntax-built-in: #f38ba8;
+  --syntax-literal: #fab387;
+  --syntax-meta: #f5c2e7;
+  --syntax-variable: #cdd6f4;
+  --syntax-tag: #89b4fa;
+  --syntax-section: #89b4fa;
+  --syntax-regexp: #f5c2e7;
+  --syntax-addition: #a6e3a1;
+  --syntax-addition-bg: rgb(166 227 161 / 14%);
+  --syntax-deletion: #f38ba8;
+  --syntax-deletion-bg: rgb(243 139 168 / 16%);
+}
