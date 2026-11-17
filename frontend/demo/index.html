@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portunus</title>
+    <style>
+      /* The native traffic lights of the real window, which a browser capture doesn't have. */
+      #root::before {
+        content: '';
+        position: fixed;
+        z-index: 1;
+        top: calc((var(--titlebar-height) - 12px) / 2);
+        left: 14px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #ff5f57;
+        box-shadow:
+          20px 0 #febc2e,
+          40px 0 #28c840;
+      }
+    </style>
+    <!-- Read before the app's modules load, so shortcuts render as ⌘. -->
+    <script>
+      Object.defineProperty(navigator, 'platform', { value: 'MacIntel' });
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

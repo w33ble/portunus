@@ -6,7 +6,17 @@
 
 Dual-pane file transfer client for SFTP and S3. Built with [Wails v3](https://v3.wails.io) (Go backend, React + TypeScript frontend). macOS first, Linux supported.
 
-Status: MVP. It runs on macOS and Linux. Builds are on the [Releases](https://github.com/w33ble/portunus/releases) page.
+It runs on macOS and Linux. Builds are on the [Releases](https://github.com/w33ble/portunus/releases) page. The [design notes](docs/design.md) explain how it works.
+
+## Screenshots
+
+| Two panes, with the connection picker open | Transfers |
+|---|---|
+| [![Two panes: a local project folder and an SSH host, with the connection picker listing favorites, SSH hosts and S3 profiles](docs/screenshots/thumbs/browser.png)](docs/screenshots/browser.png) | [![Transfers tab with running, finished, failed and canceled jobs](docs/screenshots/thumbs/transfers.png)](docs/screenshots/transfers.png) |
+| **Manage connections** | **Themes** |
+| [![The connection manager on an SSH host: read-only ssh summary, color tag, favorite, open-at folder and bookmarks](docs/screenshots/thumbs/connections.png)](docs/screenshots/connections.png) | [![Settings, Appearance: the built-in themes with Tokyo Night applied](docs/screenshots/thumbs/themes.png)](docs/screenshots/themes.png) |
+
+The screenshots come from a demo build of the real frontend with sample data (`frontend/demo`). `mise run docs:screenshots` regenerates them.
 
 ## Features
 
@@ -68,6 +78,7 @@ mise run e2e          # end-to-end smoke (Linux, needs Docker and /usr/sbin/sshd
 mise run fmt          # format Go and frontend
 mise run bindings     # regenerate frontend/bindings from Go services
 mise run icons        # regenerate app icons from build/icon/ (needs ImageMagick 7)
+mise run docs:screenshots  # regenerate docs/screenshots from the demo build (needs Docker)
 ```
 
 App icon sources live in `build/icon/`: `master-1024.png` (transparent artwork) and `portunus.svg` (the layer of the macOS 26 Icon Composer project in `build/appicon.icon`). `mise run icons` renders the tile used for `.icns`, `.ico`, the DMG, and Linux. `build/darwin/Assets.car`, the compiled macOS 26 icon, can only be produced on macOS. Builds regenerate it there, so commit it after a macOS build when the icon changes.

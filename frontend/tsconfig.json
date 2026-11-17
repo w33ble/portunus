@@ -18,5 +18,6 @@
     "noUnusedLocals": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "bindings"]
+  "include": ["src", "bindings", "demo"],
+  "exclude": ["demo/vite.config.ts"]
 }

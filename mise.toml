@@ -115,3 +115,12 @@ outputs = ["node_modules/.pnpm/lock.yaml"]
 description = "End-to-end smoke: real sshd + RustFS + server-mode build + Playwright in Docker (Linux)"
 depends = ["frontend:build", "e2e:install"]
 run = "bash e2e/run.sh"
+
+# Builds the real frontend against fake API modules (frontend/demo), then captures it in the e2e Playwright image.
+[tasks."docs:screenshots"]
+description = "Regenerate the README screenshots in docs/screenshots"
+depends = ["frontend:install", "bindings", "e2e:install"]
+run = [
+  "pnpm --dir frontend exec vite build -c demo/vite.config.ts",
+  "docker run --rm --user \"$(id -u):$(id -g)\" -e HOME=/tmp -v \"$PWD:/work\" -w /work \"${PW_IMAGE:-mcr.microsoft.com/playwright:v1.65.0-noble}\" node /work/frontend/demo/capture.mjs",
+]
