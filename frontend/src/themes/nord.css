@@ -1,0 +1,83 @@
+/*
+ * Nord by Arctic Ice Studio and Sven Greb, MIT: https://www.nordtheme.com
+ * Upstream colours, made lighter or darker only where text would fall below WCAG AA
+ * contrast (4.5:1 for text, 3:1 for icons and disabled controls).
+ */
+
+[data-theme='nord-light'] {
+  --bg: #eceff4;
+  --bg-chrome: #d8dee9;
+  --bg-chrome-active: #e5e9f0;
+  --bg-field: #f5f7fa;
+  --text: #2e3440;
+  --text-secondary: #4c566a;
+  --text-disabled: #6e7c97;
+  --accent: #597da9;
+  --accent-fill: #4d6d95;
+  --accent-text: #eceff4;
+  --selection: rgb(94 129 172 / 20%);
+  --selection-strong: #4d6d95;
+  --selection-text: #eceff4;
+  --danger: #ac4650;
+  --warning: #9a4b32;
+  --warning-bg: rgb(235 203 139 / 30%);
+  --success: #546e3e;
+  --focus-ring: 0 0 0 3px rgb(94 129 172 / 45%);
+  --syntax-keyword: #4d6d95;
+  --syntax-string: #587341;
+  --syntax-number: #8a5c82;
+  --syntax-comment: #5e6b84;
+  --syntax-title: #357385;
+  --syntax-type: #457372;
+  --syntax-attr: #457372;
+  --syntax-built-in: #496e93;
+  --syntax-literal: #496e93;
+  --syntax-meta: #a85237;
+  --syntax-variable: #2e3440;
+  --syntax-tag: #496e93;
+  --syntax-section: #357385;
+  --syntax-regexp: #8a6418;
+  --syntax-addition: #526b3c;
+  --syntax-addition-bg: rgb(163 190 140 / 20%);
+  --syntax-deletion: #9e4049;
+  --syntax-deletion-bg: rgb(191 97 106 / 15%);
+}
+
+[data-theme='nord-dark'] {
+  --bg: #2e3440;
+  --bg-chrome: #272c36;
+  --bg-chrome-active: #3b4252;
+  --bg-field: #2e3440;
+  --text: #eceff4;
+  --text-secondary: #d8dee9;
+  --text-disabled: #8490a7;
+  --accent: #88c0d0;
+  --accent-fill: #88c0d0;
+  --accent-text: #2e3440;
+  --selection: rgb(136 192 208 / 22%);
+  --selection-strong: #4d6d95;
+  --selection-text: #eceff4;
+  --danger: #d9a2a8;
+  --warning: #eccd8f;
+  --warning-bg: rgb(235 203 139 / 16%);
+  --success: #a3be8c;
+  --focus-ring: 0 0 0 3px rgb(136 192 208 / 50%);
+  --syntax-keyword: #81a1c1;
+  --syntax-string: #a3be8c;
+  --syntax-number: #b793b0;
+  --syntax-comment: #949fb3;
+  --syntax-title: #88c0d0;
+  --syntax-type: #8fbcbb;
+  --syntax-attr: #8fbcbb;
+  --syntax-built-in: #88c0d0;
+  --syntax-literal: #81a1c1;
+  --syntax-meta: #d28c76;
+  --syntax-variable: #d8dee9;
+  --syntax-tag: #81a1c1;
+  --syntax-section: #88c0d0;
+  --syntax-regexp: #ebcb8b;
+  --syntax-addition: #acc497;
+  --syntax-addition-bg: rgb(163 190 140 / 18%);
+  --syntax-deletion: #daa4aa;
+  --syntax-deletion-bg: rgb(191 97 106 / 22%);
+}

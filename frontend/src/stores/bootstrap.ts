@@ -6,6 +6,7 @@ import { parsePaneId } from './paneTypes';
 import { usePanes } from './panes';
 import { usePrompts } from './prompts';
 import { useSettings } from './settings';
+import { followTheme } from './theme';
 import { useTransfers } from './transfers';
 import { useUi } from './ui';
 
@@ -24,6 +25,7 @@ export function startBackend(): () => void {
     events.promptSecret((p) => usePrompts.getState().enqueue(secretPrompt(p))),
     events.promptConflict((p) => usePrompts.getState().enqueue(conflictPrompt(p))),
     events.promptResolved((id) => usePrompts.getState().resolve(id)),
+    followTheme(),
   ];
 
   // Listeners are live first, so nothing emitted during the initial fetches is lost.

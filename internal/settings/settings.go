@@ -12,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/w33ble/portunus/internal/atomicfile"
+	"github.com/w33ble/portunus/internal/theme"
 )
 
 const fileName = "settings.json"
@@ -28,6 +29,8 @@ type Settings struct {
 	ShowHidden bool `json:"showHidden"`
 	// SwipeNavigation turns two-finger horizontal swipes over a pane into back and forward.
 	SwipeNavigation bool `json:"swipeNavigation"`
+	// Theme is a built-in theme ID, or theme.System to follow the OS appearance.
+	Theme string `json:"theme"`
 }
 
 // Defaults are applied for missing or invalid fields.
@@ -38,6 +41,7 @@ func Defaults() Settings {
 		LoadAppleKeychain:      true,
 		ShowHidden:             false,
 		SwipeNavigation:        true,
+		Theme:                  theme.System,
 	}
 }
 
@@ -105,5 +109,8 @@ func normalize(v Settings) Settings {
 	}
 	v.GlobalTransfers = min(v.GlobalTransfers, 32)
 	v.PerConnectionTransfers = min(v.PerConnectionTransfers, v.GlobalTransfers)
+	if !theme.Valid(v.Theme) {
+		v.Theme = d.Theme
+	}
 	return v
 }

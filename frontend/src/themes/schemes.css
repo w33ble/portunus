@@ -1,0 +1,43 @@
+/*
+ * Tokens every light or every dark theme shares. A new theme adds its selector to one group here
+ * and its palette to its own file; internal/theme/theme_test.go checks the two agree.
+ */
+
+:root,
+[data-theme='light'],
+[data-theme='solarized-light'],
+[data-theme='nord-light'],
+[data-theme='catppuccin-latte'],
+[data-theme='everforest-light'],
+[data-theme='tokyo-night-day'] {
+  color-scheme: light;
+  --bg-hover: rgb(0 0 0 / 5%);
+  --bg-press: rgb(0 0 0 / 9%);
+  --bg-stripe: rgb(0 0 0 / 2.5%);
+  --border: rgb(0 0 0 / 12%);
+  --border-strong: rgb(0 0 0 / 22%);
+  --selection-inactive: rgb(0 0 0 / 9%);
+  --shadow-menu: 0 0 0 1px rgb(0 0 0 / 10%), 0 8px 28px rgb(0 0 0 / 22%);
+  --shadow-dialog: 0 0 0 1px rgb(0 0 0 / 12%), 0 20px 60px rgb(0 0 0 / 30%);
+  --shadow-control: 0 0 0 1px rgb(0 0 0 / 10%), 0 1px 1px rgb(0 0 0 / 6%);
+  --scrim: rgb(0 0 0 / 28%);
+}
+
+[data-theme='dark'],
+[data-theme='solarized-dark'],
+[data-theme='nord-dark'],
+[data-theme='catppuccin-mocha'],
+[data-theme='everforest-dark'],
+[data-theme='tokyo-night'] {
+  color-scheme: dark;
+  --bg-hover: rgb(255 255 255 / 7%);
+  --bg-press: rgb(255 255 255 / 12%);
+  --bg-stripe: rgb(255 255 255 / 3%);
+  --border: rgb(255 255 255 / 12%);
+  --border-strong: rgb(255 255 255 / 24%);
+  --selection-inactive: rgb(255 255 255 / 12%);
+  --shadow-menu: 0 0 0 1px rgb(255 255 255 / 12%), 0 8px 28px rgb(0 0 0 / 55%);
+  --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 12%), 0 20px 60px rgb(0 0 0 / 60%);
+  --shadow-control: 0 0 0 1px rgb(255 255 255 / 14%), 0 1px 1px rgb(0 0 0 / 30%);
+  --scrim: rgb(0 0 0 / 45%);
+}

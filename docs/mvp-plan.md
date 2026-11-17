@@ -27,6 +27,7 @@ Deviations from the design below, all deliberate:
 - Moves (F6, modifier-drag) are transfer jobs. On one connection they `Rename`; anything else, including overwriting an existing file and S3 prefixes, copies then deletes each source after its copy commits.
 - `PORTUNUS_SSH_CONFIG` overrides the ssh config file for listing and `ssh -G -F` (used by e2e).
 - The quick preview (Space) reads files through `PreviewService`, an `http.Handler` the asset server mounts at `/preview`, not a binding, so `<img>` and the PDF viewer load bytes directly and nothing binary goes through JSON.
+- Colour themes are built in only (no user theme files) and one choice: System, which follows the OS between Portunus Light and Dark, or a fixed light or dark theme, rather than a separate mode and theme. The backend serves the saved choice as `/theme.js`, a blocking script in `<head>`, so the first paint is already themed. Palettes keep their upstream colours except where a token would miss WCAG AA contrast; those are lightened or darkened in place.
 
 ## MVP scope
 

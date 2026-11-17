@@ -52,6 +52,7 @@ const settings = {
   loadAppleKeychain: true,
   showHidden: false,
   swipeNavigation: true,
+  theme: 'system',
 };
 
 function showModal(this: HTMLDialogElement) {
@@ -406,6 +407,24 @@ describe('App', () => {
     expect(api.transfers.move).toHaveBeenCalledWith(
       expect.objectContaining({ sources: ['/home/notes.txt'], dstDir: '/elsewhere' })
     );
+  });
+
+  it('applies a theme picked under Settings → Appearance at once and saves it', async () => {
+    vi.mocked(api.settings.save).mockImplementation(async (next) => next);
+    await act(async () => host.querySelector<HTMLElement>('[aria-label="Settings"]')?.click());
+    const tab = [...host.querySelectorAll<HTMLElement>('[role=tab]')].find(
+      (t) => t.textContent === 'Appearance'
+    );
+    await act(async () => tab?.click());
+
+    const option = (id: string) =>
+      host.querySelector<HTMLInputElement>(`input[name=theme][value=${id}]`);
+    expect(option('system')?.checked).toBe(true);
+    await act(async () => option('nord-dark')?.click());
+
+    expect(document.documentElement.dataset['theme']).toBe('nord-dark');
+    expect(api.settings.save).toHaveBeenCalledWith({ ...settings, theme: 'nord-dark' });
+    expect(option('nord-dark')?.checked).toBe(true);
   });
 
   describe('type to find', () => {

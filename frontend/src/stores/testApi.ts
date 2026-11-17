@@ -84,6 +84,7 @@ export function createApiMock() {
       respondConflict: vi.fn(),
     },
     settings: { get: vi.fn(), save: vi.fn(), swipeFromScroll: vi.fn() },
+    version: { info: vi.fn(() => new Promise(() => {})) },
     ConflictAction: {
       ConflictOverwrite: 'overwrite',
       ConflictSkip: 'skip',

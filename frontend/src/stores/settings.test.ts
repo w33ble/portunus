@@ -12,6 +12,7 @@ const base: Settings = {
   loadAppleKeychain: true,
   showHidden: false,
   swipeNavigation: true,
+  theme: 'system',
 };
 
 beforeEach(() => {

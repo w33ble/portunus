@@ -1,0 +1,83 @@
+/*
+ * Tokyo Night (Night and Day) by enkia and folke, Apache-2.0: https://github.com/folke/tokyonight.nvim
+ * Upstream colours, made lighter or darker only where text would fall below WCAG AA
+ * contrast (4.5:1 for text, 3:1 for icons and disabled controls).
+ */
+
+[data-theme='tokyo-night-day'] {
+  --bg: #e1e2e7;
+  --bg-chrome: #d0d5e3;
+  --bg-chrome-active: #e9e9ed;
+  --bg-field: #f2f2f5;
+  --text: #2b4b95;
+  --text-secondary: #485891;
+  --text-disabled: #6973a5;
+  --accent: #1c72e7;
+  --accent-fill: #155fc5;
+  --accent-text: #e1e2e7;
+  --selection: rgb(46 125 233 / 15%);
+  --selection-strong: #155fc5;
+  --selection-text: #e1e2e7;
+  --danger: #ac3434;
+  --warning: #8f4b00;
+  --warning-bg: rgb(140 108 62 / 14%);
+  --success: #4e6732;
+  --focus-ring: 0 0 0 3px rgb(46 125 233 / 40%);
+  --syntax-keyword: #802cee;
+  --syntax-string: #506b34;
+  --syntax-number: #9a5000;
+  --syntax-comment: #576090;
+  --syntax-title: #155fc5;
+  --syntax-type: #146d7c;
+  --syntax-attr: #356b63;
+  --syntax-built-in: #006b8f;
+  --syntax-literal: #9a5000;
+  --syntax-meta: #006b8f;
+  --syntax-variable: #c40940;
+  --syntax-tag: #c40940;
+  --syntax-section: #155fc5;
+  --syntax-regexp: #0e6f5b;
+  --syntax-addition: #475f2e;
+  --syntax-addition-bg: rgb(88 117 57 / 15%);
+  --syntax-deletion: #a23131;
+  --syntax-deletion-bg: rgb(198 67 67 / 12%);
+}
+
+[data-theme='tokyo-night'] {
+  --bg: #1a1b26;
+  --bg-chrome: #16161e;
+  --bg-chrome-active: #24283b;
+  --bg-field: #16161e;
+  --text: #c0caf5;
+  --text-secondary: #a9b1d6;
+  --text-disabled: #737aa2;
+  --accent: #7aa2f7;
+  --accent-fill: #3d59a1;
+  --accent-text: #ffffff;
+  --selection: rgb(122 162 247 / 22%);
+  --selection-strong: #3d59a1;
+  --selection-text: #ffffff;
+  --danger: #f7768e;
+  --warning: #e0af68;
+  --warning-bg: rgb(224 175 104 / 14%);
+  --success: #9ece6a;
+  --focus-ring: 0 0 0 3px rgb(122 162 247 / 50%);
+  --syntax-keyword: #bb9af7;
+  --syntax-string: #9ece6a;
+  --syntax-number: #ff9e64;
+  --syntax-comment: #7b83ac;
+  --syntax-title: #7aa2f7;
+  --syntax-type: #2ac3de;
+  --syntax-attr: #73daca;
+  --syntax-built-in: #7dcfff;
+  --syntax-literal: #ff9e64;
+  --syntax-meta: #7dcfff;
+  --syntax-variable: #f7768e;
+  --syntax-tag: #f7768e;
+  --syntax-section: #7aa2f7;
+  --syntax-regexp: #b4f9f8;
+  --syntax-addition: #9ece6a;
+  --syntax-addition-bg: rgb(158 206 106 / 14%);
+  --syntax-deletion: #f7768e;
+  --syntax-deletion-bg: rgb(247 118 142 / 16%);
+}

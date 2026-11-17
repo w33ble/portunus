@@ -1,5 +1,7 @@
+@import './themes/index.css';
+
+/* Colours come from the theme files; data-theme on the root picks one (see lib/theme.ts). */
 :root {
-  color-scheme: light dark;
   font-family:
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue',
     sans-serif;
@@ -8,107 +10,12 @@
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 
-  --bg: #ffffff;
-  --bg-chrome: #ececec;
-  --bg-chrome-active: #f6f6f6;
-  --bg-field: #ffffff;
-  --bg-hover: rgb(0 0 0 / 5%);
-  --bg-press: rgb(0 0 0 / 9%);
-  --bg-stripe: rgb(0 0 0 / 2.5%);
-  --text: #1d1d1f;
-  --text-secondary: #66666b;
-  --text-disabled: #85858a;
-  --border: rgb(0 0 0 / 12%);
-  --border-strong: rgb(0 0 0 / 22%);
-  --accent: #007aff;
-  --accent-fill: #0071e3;
-  --accent-text: #ffffff;
-  --selection: rgb(0 122 255 / 16%);
-  --selection-strong: #0a62d0;
-  --selection-text: #ffffff;
-  --selection-inactive: rgb(0 0 0 / 9%);
-  --danger: #d70015;
-  --warning: #a34800;
-  --warning-bg: rgb(255 159 10 / 14%);
-  --success: #248a3d;
-  --focus-ring: 0 0 0 3px rgb(0 122 255 / 40%);
-  --shadow-menu: 0 0 0 1px rgb(0 0 0 / 10%), 0 8px 28px rgb(0 0 0 / 22%);
-  --shadow-dialog: 0 0 0 1px rgb(0 0 0 / 12%), 0 20px 60px rgb(0 0 0 / 30%);
-  --shadow-control: 0 0 0 1px rgb(0 0 0 / 10%), 0 1px 1px rgb(0 0 0 / 6%);
-  --scrim: rgb(0 0 0 / 28%);
-  --syntax-keyword: #cf222e;
-  --syntax-string: #0a3069;
-  --syntax-number: #0550ae;
-  --syntax-comment: #6a737d;
-  --syntax-title: #8250df;
-  --syntax-type: #953800;
-  --syntax-attr: #116329;
-  --syntax-built-in: #0550ae;
-  --syntax-literal: #0550ae;
-  --syntax-meta: #6639ba;
-  --syntax-variable: #953800;
-  --syntax-tag: #116329;
-  --syntax-section: #0550ae;
-  --syntax-regexp: #116329;
-  --syntax-addition: #116329;
-  --syntax-addition-bg: rgb(74 194 107 / 20%);
-  --syntax-deletion: #82071e;
-  --syntax-deletion-bg: rgb(255 129 130 / 20%);
   --radius-sm: 4px;
   --radius: 6px;
   --radius-lg: 10px;
   --row-height: 22px;
   --titlebar-height: 38px;
   --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1e1e1e;
-    --bg-chrome: #2a2a2c;
-    --bg-chrome-active: #353537;
-    --bg-field: #2c2c2e;
-    --bg-hover: rgb(255 255 255 / 7%);
-    --bg-press: rgb(255 255 255 / 12%);
-    --bg-stripe: rgb(255 255 255 / 3%);
-    --text: #f5f5f7;
-    --text-secondary: #a1a1a6;
-    --text-disabled: #808085;
-    --border: rgb(255 255 255 / 12%);
-    --border-strong: rgb(255 255 255 / 24%);
-    --accent: #0a84ff;
-    --accent-fill: #0a6fdc;
-    --selection: rgb(10 132 255 / 28%);
-    --selection-strong: #0a5fd0;
-    --selection-inactive: rgb(255 255 255 / 12%);
-    --danger: #ff7a72;
-    --warning: #ffb340;
-    --warning-bg: rgb(255 159 10 / 16%);
-    --success: #32d74b;
-    --focus-ring: 0 0 0 3px rgb(10 132 255 / 55%);
-    --shadow-menu: 0 0 0 1px rgb(255 255 255 / 12%), 0 8px 28px rgb(0 0 0 / 55%);
-    --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 12%), 0 20px 60px rgb(0 0 0 / 60%);
-    --shadow-control: 0 0 0 1px rgb(255 255 255 / 14%), 0 1px 1px rgb(0 0 0 / 30%);
-    --scrim: rgb(0 0 0 / 45%);
-    --syntax-keyword: #ff7b72;
-    --syntax-string: #a5d6ff;
-    --syntax-number: #79c0ff;
-    --syntax-comment: #8b949e;
-    --syntax-title: #d2a8ff;
-    --syntax-type: #ffa657;
-    --syntax-attr: #7ee787;
-    --syntax-built-in: #79c0ff;
-    --syntax-literal: #79c0ff;
-    --syntax-meta: #d2a8ff;
-    --syntax-variable: #ffa657;
-    --syntax-tag: #7ee787;
-    --syntax-section: #79c0ff;
-    --syntax-regexp: #7ee787;
-    --syntax-addition: #7ee787;
-    --syntax-addition-bg: rgb(46 160 67 / 20%);
-    --syntax-deletion: #ffa198;
-    --syntax-deletion-bg: rgb(248 81 73 / 20%);
-  }
 }
 
 *,

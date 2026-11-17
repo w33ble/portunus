@@ -23,7 +23,7 @@ func TestSaveRoundTripsThroughDisk(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := Settings{GlobalTransfers: 4, PerConnectionTransfers: 2, LoadAppleKeychain: false, ShowHidden: true, SwipeNavigation: false}
+	want := Settings{GlobalTransfers: 4, PerConnectionTransfers: 2, LoadAppleKeychain: false, ShowHidden: true, SwipeNavigation: false, Theme: "nord-dark"}
 	if _, err := s.Save(want); err != nil {
 		t.Fatal(err)
 	}
@@ -143,8 +143,30 @@ func TestSaveKeepsOnDiskFieldNames(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "{\n  \"globalTransfers\": 4,\n  \"perConnectionTransfers\": 2,\n  \"loadAppleKeychain\": true,\n  \"showHidden\": false,\n  \"swipeNavigation\": true\n}\n"
+	want := "{\n  \"globalTransfers\": 4,\n  \"perConnectionTransfers\": 2,\n  \"loadAppleKeychain\": true,\n  \"showHidden\": false,\n  \"swipeNavigation\": true,\n  \"theme\": \"system\"\n}\n"
 	if string(raw) != want {
 		t.Fatalf("settings.json = %q, want %q", raw, want)
+	}
+}
+
+func TestUnknownThemeFallsBackToSystem(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, fileName), []byte(`{"theme": "removed-theme"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := s.Get().Theme; got != "system" {
+		t.Fatalf("loaded theme = %q, want system", got)
+	}
+
+	got, err := s.Save(Settings{Theme: ""})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Theme != "system" {
+		t.Fatalf("saved theme = %q, want system", got.Theme)
 	}
 }

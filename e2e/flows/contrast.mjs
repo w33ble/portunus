@@ -3,7 +3,7 @@ import { contrastAudit } from './a11y.mjs';
 
 const REMOTE = `${process.env.E2E_DIR}/remote`;
 
-// Opens every dialog in each state a user can reach, and the highlighted quick preview, and checks text contrast in both colour schemes.
+// Opens every dialog in each state a user can reach, and the highlighted quick preview, and checks text contrast in every theme.
 await flow('contrast', async ({ page, left, right, row, step, goTo }) => {
   const audit = contrastAudit(page);
   const dialog = page.locator('dialog[open]');
@@ -64,6 +64,9 @@ await flow('contrast', async ({ page, left, right, row, step, goTo }) => {
   await page.getByLabel('Settings').click();
   await dialog.getByLabel('Parallel transfers').waitFor();
   await checked('Settings');
+  await dialog.getByRole('tab', { name: 'Appearance' }).click();
+  await dialog.getByRole('radio', { name: /Nord Dark/ }).waitFor();
+  await checked('Settings, appearance');
   await close();
 
   step('host key and passphrase prompts');
@@ -87,6 +90,14 @@ await flow('contrast', async ({ page, left, right, row, step, goTo }) => {
   await checked('Conflict');
   await dialog.getByRole('button', { name: /cancel job/i }).click();
   await dialog.waitFor({ state: 'detached' });
+
+  step('main window: a selection in the browser, then the canceled job in transfers');
+  await row(left, 'hello.txt').click();
+  await audit.check('Browser', { scope: '#root' });
+  await page.getByRole('tab', { name: /transfers/i }).click();
+  await page.getByText(/canceled/i).first().waitFor({ timeout: 15000 });
+  await audit.check('Transfers', { scope: '#root' });
+  await page.getByRole('tab', { name: /browser/i }).click();
 
   step('quick preview: highlighted code and a diff');
   const panel = page.locator('section[data-preview]');

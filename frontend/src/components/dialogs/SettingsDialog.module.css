@@ -1,0 +1,32 @@
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius);
+  background: var(--bg-hover);
+}
+
+.tab {
+  flex: 1;
+  min-height: 22px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: transparent;
+  color: var(--text);
+  cursor: default;
+  transition-property: background-color, box-shadow;
+  transition-duration: 120ms;
+  transition-timing-function: ease-out;
+}
+
+.tab[aria-selected='true'] {
+  background: var(--bg-field);
+  box-shadow: var(--shadow-control);
+}
+
+.panel {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}

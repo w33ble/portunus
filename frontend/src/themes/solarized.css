@@ -1,0 +1,83 @@
+/*
+ * Solarized by Ethan Schoonover, MIT: https://ethanschoonover.com/solarized/
+ * Upstream colours, made lighter or darker only where text would fall below WCAG AA
+ * contrast (4.5:1 for text, 3:1 for icons and disabled controls).
+ */
+
+[data-theme='solarized-light'] {
+  --bg: #fdf6e3;
+  --bg-chrome: #eee8d5;
+  --bg-chrome-active: #f6efdc;
+  --bg-field: #fdf6e3;
+  --text: #073642;
+  --text-secondary: #556a71;
+  --text-disabled: #748585;
+  --accent: #2588ce;
+  --accent-fill: #1f6fa8;
+  --accent-text: #fdf6e3;
+  --selection: rgb(38 139 210 / 16%);
+  --selection-strong: #1f6fa8;
+  --selection-text: #fdf6e3;
+  --danger: #cf2623;
+  --warning: #ab3f12;
+  --warning-bg: rgb(181 137 0 / 14%);
+  --success: #627000;
+  --focus-ring: 0 0 0 3px rgb(38 139 210 / 40%);
+  --syntax-keyword: #667500;
+  --syntax-string: #207b74;
+  --syntax-number: #cb2c79;
+  --syntax-comment: #637272;
+  --syntax-title: #2074af;
+  --syntax-type: #8c6a00;
+  --syntax-attr: #2074af;
+  --syntax-built-in: #c24815;
+  --syntax-literal: #207b74;
+  --syntax-meta: #c24815;
+  --syntax-variable: #2074af;
+  --syntax-tag: #2074af;
+  --syntax-section: #8c6a00;
+  --syntax-regexp: #d72724;
+  --syntax-addition: #5d6b00;
+  --syntax-addition-bg: rgb(133 153 0 / 14%);
+  --syntax-deletion: #c22321;
+  --syntax-deletion-bg: rgb(220 50 47 / 12%);
+}
+
+[data-theme='solarized-dark'] {
+  --bg: #002b36;
+  --bg-chrome: #073642;
+  --bg-chrome-active: #0a3d4a;
+  --bg-field: #002b36;
+  --text: #eee8d5;
+  --text-secondary: #97a5a5;
+  --text-disabled: #839496;
+  --accent: #268bd2;
+  --accent-fill: #1f6fa8;
+  --accent-text: #fdf6e3;
+  --selection: rgb(38 139 210 / 28%);
+  --selection-strong: #1f6fa8;
+  --selection-text: #fdf6e3;
+  --danger: #ea8684;
+  --warning: #e0a900;
+  --warning-bg: rgb(181 137 0 / 16%);
+  --success: #97ad00;
+  --focus-ring: 0 0 0 3px rgb(38 139 210 / 55%);
+  --syntax-keyword: #859900;
+  --syntax-string: #2aa198;
+  --syntax-number: #de66a0;
+  --syntax-comment: #7a939b;
+  --syntax-title: #3295da;
+  --syntax-type: #b58900;
+  --syntax-attr: #3295da;
+  --syntax-built-in: #e96833;
+  --syntax-literal: #2aa198;
+  --syntax-meta: #e96833;
+  --syntax-variable: #3295da;
+  --syntax-tag: #3295da;
+  --syntax-section: #b58900;
+  --syntax-regexp: #e56866;
+  --syntax-addition: #97ad00;
+  --syntax-addition-bg: rgb(133 153 0 / 18%);
+  --syntax-deletion: #e7706e;
+  --syntax-deletion-bg: rgb(220 50 47 / 18%);
+}

@@ -1,4 +1,5 @@
-// Builds THIRD_PARTY_NOTICES.md from go-licenses' saved license files and pnpm's license list.
+// Builds THIRD_PARTY_NOTICES.md from go-licenses' saved license files, pnpm's license list and
+// the licenses of the colour themes' palettes (palettes/<name>/LICENSE, next to this script).
 // Identical license texts are printed once with every package that ships them.
 // Usage: node notices.mjs <pnpm licenses list --json file> <go-licenses save dir>...
 import { createHash } from 'node:crypto';
@@ -24,14 +25,16 @@ function add(pkg, text) {
   groups.set(key, group);
 }
 
-function walk(root, dir) {
+function walk(root, dir, kind) {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
-    if (statSync(path).isDirectory()) walk(root, path);
-    else if (LICENSE_FILE.test(name)) add(`${relative(root, dir)} (Go)`, readFileSync(path, 'utf8'));
+    if (statSync(path).isDirectory()) walk(root, path, kind);
+    else if (LICENSE_FILE.test(name)) add(`${relative(root, dir)} (${kind})`, readFileSync(path, 'utf8'));
   }
 }
-for (const root of goDirs) walk(root, root);
+for (const root of goDirs) walk(root, root, 'Go');
+const palettes = join(import.meta.dirname, 'palettes');
+walk(palettes, palettes, 'colour palette');
 
 const npm = JSON.parse(readFileSync(npmJson, 'utf8'));
 for (const entries of Object.values(npm)) {
