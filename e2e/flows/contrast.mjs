@@ -122,6 +122,9 @@ await flow('contrast', async ({ page, left, right, row, step, goTo }) => {
   await dialog.getByRole('button', { name: 'Save' }).click();
   await dialog.getByText(/name/i).last().waitFor();
   await checked('S3 profile form, error');
+  await dialog.getByLabel('Provider').selectOption({ label: 'Backblaze B2' });
+  await checked('S3 profile form, Backblaze B2 preset');
+  await dialog.getByLabel('Provider').selectOption({ label: 'Amazon S3' });
   await dialog.getByLabel('Name', { exact: true }).fill('contrast-check');
   await dialog.getByLabel('Access key ID').fill('key');
   await dialog.getByLabel('Secret access key').fill('secret');

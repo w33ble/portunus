@@ -1,9 +1,12 @@
 import type { S3Profile } from '../api/types';
+import { S3_PROVIDERS, type S3ProviderId, providerOf } from './s3Providers';
 
 export type S3Auth = 'aws-profile' | 'keys';
 
 export interface S3FormValues {
   id: string;
+  /** Not saved; recognised again from the endpoint when editing. */
+  provider: S3ProviderId;
   name: string;
   auth: S3Auth;
   awsProfile: string;
@@ -17,6 +20,7 @@ export interface S3FormValues {
 
 export const EMPTY_S3_FORM: S3FormValues = {
   id: '',
+  provider: 'aws',
   name: '',
   auth: 'aws-profile',
   awsProfile: '',
@@ -31,6 +35,7 @@ export const EMPTY_S3_FORM: S3FormValues = {
 export function formFromProfile(p: S3Profile): S3FormValues {
   return {
     id: p.id,
+    provider: providerOf(p),
     name: p.name,
     auth: p.profile ? 'aws-profile' : p.accessKeyId ? 'keys' : 'aws-profile',
     awsProfile: p.profile ?? '',
@@ -68,6 +73,10 @@ export function validateS3Form(f: S3FormValues): string | null {
     if (f.id === '' && f.secret === '') return 'Enter the secret access key.';
   }
   const endpoint = f.endpoint.trim();
+  const provider = S3_PROVIDERS[f.provider];
+  if (provider.kind === 'custom' && endpoint === '') {
+    return `Enter the ${provider.label} endpoint.`;
+  }
   if (endpoint !== '' && !/^https?:\/\/\S+$/i.test(endpoint)) {
     return 'The endpoint must start with http:// or https://.';
   }

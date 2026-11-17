@@ -9,6 +9,7 @@ import {
   secretFor,
   validateS3Form,
 } from '../../lib/s3Form';
+import { describeLocation } from '../../lib/s3Providers';
 import { useConnections } from '../../stores/connections';
 import controls from '../ui/controls.module.css';
 import { Icon } from '../ui/Icon';
@@ -22,8 +23,7 @@ function describeProfile(p: S3Profile): string {
     : p.accessKeyId
       ? 'Access key'
       : 'Default credentials';
-  const where = p.endpoint || p.region || 'AWS';
-  return `${auth} · ${where}${p.bucket ? ` · ${p.bucket}` : ''}`;
+  return `${auth} · ${describeLocation(p)}${p.bucket ? ` · ${p.bucket}` : ''}`;
 }
 
 export function S3ProfilesDialog({ onClose }: { onClose: () => void }) {
