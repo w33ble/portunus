@@ -1,0 +1,293 @@
+.split {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+  height: min(520px, calc(100vh - 160px));
+  min-height: 0;
+}
+
+.sidebar {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 0;
+  padding-right: 12px;
+  border-right: 1px solid var(--border);
+}
+
+.list {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-height: 0;
+  overflow-y: auto;
+  /* Room for focus rings that would otherwise be clipped by the scroll container. */
+  margin: -4px;
+  padding: 4px;
+}
+
+.groupLabel {
+  padding: 4px 8px 2px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: var(--radius);
+  color: var(--text);
+  cursor: default;
+}
+
+.row:hover {
+  background: var(--bg-hover);
+}
+
+.row[data-selected='true'] {
+  background: var(--selection);
+}
+
+/* Dimmed with a quieter colour, not opacity, so the text keeps its contrast. */
+.row[data-hidden='true']:not([data-selected='true']) {
+  color: var(--text-secondary);
+}
+
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.rowName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.edited {
+  flex: none;
+  font-size: 12px;
+}
+
+.hiddenMark {
+  display: grid;
+  flex: none;
+  color: var(--text-secondary);
+}
+
+.listActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+}
+
+.confirmText {
+  flex-basis: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.detailHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.titleBlock {
+  flex: 1;
+  min-width: 0;
+}
+
+.detailName {
+  margin: 0;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source {
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.detailBody {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  margin: -4px;
+  padding: 4px;
+}
+
+.sectionTitle {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fields {
+  display: grid;
+  gap: 10px;
+}
+
+.fieldset {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.fieldset legend {
+  padding: 0;
+  margin-bottom: 3px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.readonly {
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.swatches {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 22px;
+  padding-left: 2px;
+}
+
+.swatch {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: 0 0 0 1px var(--border-strong);
+  cursor: default;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* The first swatch is "none": an empty circle struck through. */
+.swatch:first-child {
+  background-image: linear-gradient(
+    135deg,
+    transparent 44%,
+    var(--text-secondary) 44%,
+    var(--text-secondary) 56%,
+    transparent 56%
+  );
+}
+
+.swatch:checked {
+  box-shadow:
+    0 0 0 2px var(--bg-chrome-active),
+    0 0 0 4px var(--text);
+}
+
+.swatch:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--bg-chrome-active),
+    0 0 0 4px var(--accent);
+}
+
+.bookmarks {
+  display: grid;
+  gap: 6px;
+}
+
+.bookmark {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bookmarkText {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bookmarkText .path {
+  overflow: hidden;
+  color: var(--text-secondary);
+  overflow-wrap: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+button.pinned {
+  color: var(--accent);
+}
+
+.addBookmark {
+  display: flex;
+  gap: 6px;
+}
+
+.addBookmark input {
+  flex: 1;
+  min-width: 0;
+}
+
+.footer {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.footerGroup {
+  display: flex;
+  gap: 8px;
+}
+
+.footerError {
+  flex: 1;
+  min-width: 0;
+}

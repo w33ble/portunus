@@ -8,7 +8,7 @@ import {
 } from '../../lib/s3Providers';
 import controls from '../ui/controls.module.css';
 import { Select } from '../ui/Select';
-import styles from './S3ProfilesDialog.module.css';
+import styles from './S3ProfileForm.module.css';
 
 interface Props {
   values: S3FormValues;

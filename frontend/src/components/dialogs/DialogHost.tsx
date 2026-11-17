@@ -3,11 +3,11 @@ import { usePrompts } from '../../stores/prompts';
 import { useUi } from '../../stores/ui';
 import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
 import { ConflictDialog } from './ConflictDialog';
+import { ConnectionsDialog } from './ConnectionsDialog';
 import { ErrorDialog } from './ErrorDialog';
 import { HostKeyDialog } from './HostKeyDialog';
 import { NameDialog } from './NameDialog';
 import { QuickConnectDialog } from './QuickConnectDialog';
-import { S3ProfilesDialog } from './S3ProfilesDialog';
 import { SecretDialog } from './SecretDialog';
 import { SettingsDialog } from './SettingsDialog';
 
@@ -45,8 +45,8 @@ function UiDialog() {
       );
     case 'quickConnect':
       return <QuickConnectDialog paneId={dialog.paneId} onClose={close} />;
-    case 's3Profiles':
-      return <S3ProfilesDialog onClose={close} />;
+    case 'connections':
+      return <ConnectionsDialog connId={dialog.connId} onClose={close} />;
     case 'settings':
       return <SettingsDialog onClose={close} />;
     case 'error':

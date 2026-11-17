@@ -8,6 +8,12 @@ export interface MenuItem {
   onSelect: () => void;
   /** Draws a divider above this item. */
   separator?: boolean;
+  /** Starts a titled section: a divider (unless first) and a heading above this item. */
+  heading?: string;
+  /** Secondary text after the label. */
+  detail?: string;
+  /** Explains a disabled item, shown under its label. */
+  hint?: string;
 }
 
 interface Props {
@@ -97,8 +103,15 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
       }}
     >
       {items.map((item, i) => (
-        <div key={item.label}>
-          {item.separator && <div role="separator" className={styles.separator} />}
+        <div key={i}>
+          {(item.separator || (item.heading !== undefined && i > 0)) && (
+            <div role="separator" className={styles.separator} />
+          )}
+          {item.heading !== undefined && (
+            <div role="presentation" className={styles.heading}>
+              {item.heading}
+            </div>
+          )}
           <button
             type="button"
             role="menuitem"
@@ -106,10 +119,15 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
             className={styles.item}
             data-focused={i === focused}
             disabled={item.disabled}
+            title={item.hint}
             onMouseEnter={() => !item.disabled && setFocused(i)}
             onClick={() => choose(item)}
           >
-            <span>{item.label}</span>
+            <span className={styles.text}>
+              <span className={styles.label}>{item.label}</span>
+              {item.hint && <span className={styles.hint}>{item.hint}</span>}
+            </span>
+            {item.detail && <span className={styles.detail}>{item.detail}</span>}
             {item.shortcut && <span className={styles.shortcut}>{item.shortcut}</span>}
           </button>
         </div>

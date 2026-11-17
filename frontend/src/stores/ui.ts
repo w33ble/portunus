@@ -15,7 +15,8 @@ export type Dialog =
   | { kind: 'newFolder'; paneId: PaneId }
   | { kind: 'rename'; paneId: PaneId; path: string; name: string }
   | { kind: 'quickConnect'; paneId: PaneId }
-  | { kind: 's3Profiles' }
+  /** The connection manager, with `connId` selected (else the first connection). */
+  | { kind: 'connections'; connId?: string }
   | { kind: 'settings' }
   | { kind: 'error'; title: string; message: string; hint: string | null };
 

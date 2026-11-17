@@ -18,7 +18,7 @@ import {
 } from '../../stores/fileOps';
 import type { PaneId } from '../../stores/paneTypes';
 import { usePanes } from '../../stores/panes';
-import { selectShowHidden, useSettings } from '../../stores/settings';
+import { useShowHidden } from '../../stores/connections';
 import { useUi } from '../../stores/ui';
 import { ColumnHeader } from './ColumnHeader';
 import { ContextMenu, type MenuItem } from './ContextMenu';
@@ -46,7 +46,7 @@ interface Props {
 
 export function FileList({ paneId, onEditPath }: Props) {
   const pane = usePanes((s) => s.panes[paneId]);
-  const showHidden = useSettings(selectShowHidden);
+  const showHidden = useShowHidden(pane.connId);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const typeAhead = useRef(EMPTY_TYPE_AHEAD);
   const [typed, setTyped] = useState('');

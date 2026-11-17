@@ -1,6 +1,7 @@
 import { type KeyboardEvent, type MouseEvent, useRef } from 'react';
 import { historyButton, historyKey } from '../../lib/history';
 import { IS_MAC, isEditable } from '../../lib/platform';
+import { toggleBookmark } from '../../stores/bookmarks';
 import { requestNewFolder } from '../../stores/fileOps';
 import type { PaneId } from '../../stores/paneTypes';
 import { usePanes } from '../../stores/panes';
@@ -51,6 +52,9 @@ export function Pane({ paneId, hidden = false }: { paneId: PaneId; hidden?: bool
     } else if (key === 'n' && event.shiftKey) {
       event.preventDefault();
       requestNewFolder(paneId);
+    } else if (key === 'd') {
+      event.preventDefault();
+      void toggleBookmark(paneId);
     } else if (key === 'f') {
       event.preventDefault();
       const field = event.currentTarget.querySelector<HTMLInputElement>('[data-filter-input]');

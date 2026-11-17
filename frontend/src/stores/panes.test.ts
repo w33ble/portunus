@@ -81,6 +81,27 @@ describe('connecting', () => {
     });
   });
 
+  it('opens the connection’s open-at folder and falls back to home when it’s gone', async () => {
+    const lists = captureLists();
+    useConnections.setState({ prefs: { local: { openAt: '/srv/logs' } } });
+    await openLocal();
+    expect(left().path).toBe('/srv/logs');
+
+    lists[0]!.done.reject(bindingError('not_exist', 'no such folder'));
+    await vi.waitFor(() => expect(lists).toHaveLength(2));
+    expect(left()).toMatchObject({ path: '/home', status: { kind: 'loading' } });
+    expect(useUi.getState().dialog).toBeNull();
+  });
+
+  it('opens the requested folder instead of the open-at folder', async () => {
+    captureLists();
+    useConnections.setState({ prefs: { local: { openAt: '/srv/logs' } } });
+    connectMock.mockResolvedValue(localConnection());
+    const ok = await usePanes.getState().connectTo('left', api.targets.local(), 'Local', '/etc');
+    expect(ok).toBe(true);
+    expect(left().path).toBe('/etc');
+  });
+
   it('explains a host key mismatch', async () => {
     connectMock.mockRejectedValue(
       bindingError('hostkey_mismatch', 'key for h changed (known_hosts:3)')

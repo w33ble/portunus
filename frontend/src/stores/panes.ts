@@ -18,6 +18,7 @@ import { EMPTY_SELECTION, type Selection } from '../lib/selection';
 import { DEFAULT_SORT, type SortKey, type SortState, toggleSort } from '../lib/sort';
 import { useConnections } from './connections';
 import { PANE_IDS, type PaneId } from './paneTypes';
+import { useRecents } from './recents';
 import { useUi } from './ui';
 
 export type PaneStatus =
@@ -49,7 +50,11 @@ interface PanesState {
   panes: PaneMap;
   /** Opens both panes on the local home directory. No-op once a pane is in use. */
   init: () => void;
-  connectTo: (id: PaneId, target: Target, label: string) => Promise<void>;
+  /**
+   * Connects the pane to `target` and lists `path`, else the connection's open-at folder,
+   * else its home. Resolves true once connected.
+   */
+  connectTo: (id: PaneId, target: Target, label: string, path?: string) => Promise<boolean>;
   /** Redials the pane's last target and relists the current directory. */
   reconnect: (id: PaneId) => Promise<void>;
   navigate: (id: PaneId, path: string) => void;
@@ -117,7 +122,13 @@ export const usePanes = create<PanesState>()((set, get) => {
     connId: string,
     path: string,
     mode: 'navigate' | 'refresh',
-    opts: { lastTarget?: PaneState['lastTarget']; history?: History; restore?: Selection } = {}
+    opts: {
+      lastTarget?: PaneState['lastTarget'];
+      history?: History;
+      restore?: Selection;
+      /** Listed instead when `path` doesn't exist, e.g. a stale open-at folder. */
+      fallback?: string;
+    } = {}
   ) {
     const requestId = `${id}-${++requestCounter}`;
     inflight[id]?.cancel();
@@ -140,6 +151,7 @@ export const usePanes = create<PanesState>()((set, get) => {
     handle.done.then(
       () => {
         if (!isCurrent(id, requestId)) return;
+        useRecents.getState().visit(connId, path);
         pageBatcher.flush();
         patch(id, (pane) =>
           settle({
@@ -153,35 +165,55 @@ export const usePanes = create<PanesState>()((set, get) => {
       },
       (e: unknown) => {
         if (isCanceled(e) || !isCurrent(id, requestId)) return;
+        const error = toAppError(e);
+        if (opts.fallback !== undefined && error.kind === 'not_exist') {
+          const { fallback, ...rest } = opts;
+          load(id, connId, fallback, mode, rest);
+          return;
+        }
         pageBatcher.flush();
         patch(id, (pane) => ({
           ...pane,
-          status: { kind: 'error', error: toAppError(e) },
+          status: { kind: 'error', error },
           listing: failListing(pane.listing, requestId),
         }));
       }
     );
   }
 
-  /** Connects `target`; lists `keepPath` when given, else the connection's home. */
-  async function dial(id: PaneId, target: Target, label: string, keepPath: string | null) {
+  /**
+   * Connects `target`; lists `keepPath` when reconnecting in place, else `path`, the
+   * connection's open-at folder, or its home.
+   */
+  async function dial(
+    id: PaneId,
+    target: Target,
+    label: string,
+    keepPath: string | null,
+    path?: string
+  ): Promise<boolean> {
     const token = ++connectSeq[id];
     patch(id, (pane) => ({ ...pane, status: { kind: 'connecting', label } }));
     try {
       const conn = await api.connections.connect(target);
-      if (token !== connectSeq[id]) return;
+      if (token !== connectSeq[id]) return false;
       useConnections.getState().upsert(conn);
-      const path = keepPath ?? normalizePath(conn.home || '/');
+      const home = normalizePath(conn.home || '/');
+      const openAt = useConnections.getState().prefs[conn.id]?.openAt;
+      const to = keepPath ?? normalizePath(path ?? openAt ?? home);
       // A new connection starts a fresh history; reconnecting in place keeps it.
-      load(id, conn.id, path, keepPath === null ? 'navigate' : 'refresh', {
+      load(id, conn.id, to, keepPath === null ? 'navigate' : 'refresh', {
         lastTarget: { target, label },
         ...(keepPath === null && { history: EMPTY_HISTORY }),
+        ...(keepPath === null && path === undefined && to !== home && { fallback: home }),
       });
+      return true;
     } catch (e) {
-      if (token !== connectSeq[id]) return;
+      if (token !== connectSeq[id]) return false;
       const error = toAppError(e);
       patch(id, (pane) => ({ ...pane, status: { kind: 'error', error } }));
       useUi.getState().showError(`Couldn’t connect to ${label}`, error);
+      return false;
     }
   }
 
@@ -197,9 +229,7 @@ export const usePanes = create<PanesState>()((set, get) => {
       }
     },
 
-    async connectTo(id, target, label) {
-      await dial(id, target, label, null);
-    },
+    connectTo: (id, target, label, path) => dial(id, target, label, null, path),
 
     async reconnect(id) {
       const { lastTarget, path } = get().panes[id];

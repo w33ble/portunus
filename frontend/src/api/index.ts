@@ -7,19 +7,23 @@ import {
   VersionService,
 } from '../../bindings/github.com/w33ble/portunus/internal/services';
 import type { ConflictAnswer } from '../../bindings/github.com/w33ble/portunus/internal/prompt';
-import { Policy, TargetKind } from './enums';
+import { Policy } from './enums';
 import { toAppError } from './errors';
 import { type ListBackend, type Listing, pullListing } from './listing';
 import { loadPreview } from './preview';
 import type {
+  Bookmark,
   Connection,
   DirSummary,
   Entry,
   Host,
   JobView,
   Pending,
+  Prefs,
   S3Profile,
+  SavedHost,
   Settings,
+  SSHHostDetails,
   VersionInfo,
   Target,
 } from './types';
@@ -69,6 +73,13 @@ export const preview = {
   load: loadPreview,
 };
 
+/** Saved connection data, with the wire's nulls as empty values. */
+export interface Saved {
+  hosts: SavedHost[];
+  prefs: Partial<Record<string, Prefs>>;
+  bookmarks: Bookmark[];
+}
+
 export const connections = {
   list: async (): Promise<Connection[]> => (await call(ConnectionService.Connections())) ?? [],
   connect: (target: Target): Promise<Connection> => call(ConnectionService.Connect(target)),
@@ -79,20 +90,24 @@ export const connections = {
   saveS3Profile: (profile: S3Profile, secret: string): Promise<S3Profile> =>
     call(ConnectionService.SaveS3Profile(profile, secret)),
   deleteS3Profile: (id: string): Promise<void> => call(ConnectionService.DeleteS3Profile(id)),
+  /** What `ssh -G` resolves for a ~/.ssh/config alias. */
+  sshHostDetails: (alias: string): Promise<SSHHostDetails> =>
+    call(ConnectionService.SSHHostDetails(alias)),
+  /** Saved hosts, per-connection preferences and bookmarks. */
+  saved: async (): Promise<Saved> => {
+    const d = await call(ConnectionService.Saved());
+    return { hosts: d.hosts ?? [], prefs: d.prefs ?? {}, bookmarks: d.bookmarks ?? [] };
+  },
+  saveSSHHost: (host: SavedHost): Promise<SavedHost> => call(ConnectionService.SaveSSHHost(host)),
+  deleteSSHHost: (id: string): Promise<void> => call(ConnectionService.DeleteSSHHost(id)),
+  saveConnectionPrefs: (connId: string, prefs: Prefs, bookmarks: Bookmark[]): Promise<void> =>
+    call(ConnectionService.SaveConnectionPrefs(connId, prefs, bookmarks)),
+  addBookmark: (bookmark: Bookmark): Promise<Bookmark> =>
+    call(ConnectionService.AddBookmark(bookmark)),
+  removeBookmark: (id: string): Promise<void> => call(ConnectionService.RemoveBookmark(id)),
 };
 
-/** Connect targets, built with the generated TargetKind values. */
-export const targets = {
-  local: (): Target => ({ kind: TargetKind.TargetLocal }),
-  ssh: (alias: string): Target => ({ kind: TargetKind.TargetSSH, alias }),
-  quick: (user: string, host: string, port: number): Target => ({
-    kind: TargetKind.TargetSSH,
-    host,
-    ...(user ? { user } : {}),
-    ...(port ? { port } : {}),
-  }),
-  s3: (profileId: string): Target => ({ kind: TargetKind.TargetS3, profileId }),
-};
+export { targets } from './targets';
 
 export const transfers = {
   jobs: async (): Promise<JobView[]> => (await call(TransferService.Jobs())) ?? [],
