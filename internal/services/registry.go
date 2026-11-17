@@ -4,15 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"golang.org/x/sync/singleflight"
 
+	"github.com/w33ble/portunus/internal/connprefs"
 	"github.com/w33ble/portunus/internal/vfs"
 )
 
@@ -106,14 +105,7 @@ func targetID(t Target) (string, error) {
 		if t.Host == "" {
 			return "", errors.New("ssh target needs an alias or host")
 		}
-		hostPort := t.Host
-		if t.Port != 0 {
-			hostPort = net.JoinHostPort(t.Host, strconv.Itoa(t.Port))
-		}
-		if t.User != "" {
-			return "ssh:" + t.User + "@" + hostPort, nil
-		}
-		return "ssh:" + hostPort, nil
+		return connprefs.SSHConnID(t.User, t.Host, t.Port), nil
 	case TargetS3:
 		if t.ProfileID == "" {
 			return "", errors.New("s3 target needs a profile")

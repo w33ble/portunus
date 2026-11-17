@@ -36,7 +36,7 @@ func (e *Engine) dispatchLocked() {
 
 func (e *Engine) permitsFreeLocked(j *job) bool {
 	for _, c := range j.conns {
-		if e.conns[c] >= e.limits.PerConn {
+		if e.conns[c] >= e.limits.forConn(c) {
 			return false
 		}
 	}

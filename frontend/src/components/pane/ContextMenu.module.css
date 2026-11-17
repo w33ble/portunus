@@ -2,6 +2,7 @@
   position: fixed;
   z-index: 100;
   min-width: 210px;
+  max-width: 360px;
   padding: 4px;
   border-radius: var(--radius-lg);
   background: var(--bg-chrome-active);
@@ -31,6 +32,35 @@
 
 .item:disabled {
   color: var(--text-disabled);
+}
+
+.text {
+  display: grid;
+  min-width: 0;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.detail {
+  flex: none;
+  margin-left: auto;
+  opacity: 0.6;
+  font-size: 12px;
+}
+
+.heading {
+  padding: 4px 10px 2px;
+  color: var(--text-secondary);
+  font-size: 11px;
 }
 
 .shortcut {

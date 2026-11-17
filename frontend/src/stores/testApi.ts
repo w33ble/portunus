@@ -60,6 +60,13 @@ export function createApiMock() {
       s3Profiles: vi.fn(),
       saveS3Profile: vi.fn(),
       deleteS3Profile: vi.fn(),
+      sshHostDetails: vi.fn(),
+      saved: vi.fn(() => Promise.resolve({ hosts: [], prefs: {}, bookmarks: [] })),
+      saveSSHHost: vi.fn(),
+      deleteSSHHost: vi.fn(),
+      saveConnectionPrefs: vi.fn(),
+      addBookmark: vi.fn(),
+      removeBookmark: vi.fn(),
     },
     targets: {
       local: () => ({ kind: 'local' }),

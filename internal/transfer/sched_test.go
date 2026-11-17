@@ -59,6 +59,25 @@ func TestPerConnectionLimitCapsTasksTouchingOneConnection(t *testing.T) {
 	}
 }
 
+func TestPerConnectionOverrideReplacesTheSharedLimitForThatConnection(t *testing.T) {
+	t.Parallel()
+	h := newHarness(t, func(o *Options) {
+		o.Limits = Limits{Global: 8, PerConn: 1, Conn: map[string]int{"a": 3, "b": 3}}
+	})
+	names := numbered("f", 8)
+	addFiles(h.fs["a"], "/src", names)
+	bl := newBlocker("open")
+	h.fs["a"].setHook(bl.hook)
+	id := h.copyJob("a", joinPaths("/src", names), "b", "/dst", PolicyAsk)
+	bl.waitArrived(h, 3)
+	bl.stays(t, 3)
+	bl.releaseAll()
+	h.waitState(id, StateDone)
+	if peak := h.fs["a"].active.peak.Load(); peak != 3 {
+		t.Errorf("conn a peaked at %d tasks, want its override of 3", peak)
+	}
+}
+
 func TestSaturatedConnectionDoesNotBlockOtherConnections(t *testing.T) {
 	t.Parallel()
 	h := newHarness(t, withLimits(4, 1))

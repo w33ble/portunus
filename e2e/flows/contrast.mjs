@@ -4,7 +4,7 @@ import { contrastAudit } from './a11y.mjs';
 const REMOTE = `${process.env.E2E_DIR}/remote`;
 
 // Opens every dialog in each state a user can reach, and the highlighted quick preview, and checks text contrast in every theme.
-await flow('contrast', async ({ page, left, right, row, step, goTo }) => {
+await flow('contrast', async ({ page, left, right, row, step, goTo, pick }) => {
   const audit = contrastAudit(page);
   const dialog = page.locator('dialog[open]');
   const close = async () => {
@@ -12,9 +12,12 @@ await flow('contrast', async ({ page, left, right, row, step, goTo }) => {
     await dialog.waitFor({ state: 'detached' });
   };
   const checked = async (label) => {
-    await dialog.waitFor({ timeout: 5000 }).catch((e) => {
-      throw new Error(`${label}: dialog never opened\n${e.message}`);
-    });
+    await dialog
+      .first()
+      .waitFor({ timeout: 5000 })
+      .catch((e) => {
+        throw new Error(`${label}: dialog never opened\n${e.message}`);
+      });
     await audit.check(label);
   };
 
@@ -46,8 +49,7 @@ await flow('contrast', async ({ page, left, right, row, step, goTo }) => {
   await close();
 
   step('quick connect: empty, invalid, refused');
-  const connection = right.getByLabel('Connection');
-  await connection.selectOption({ label: 'Quick connect…' });
+  await pick(right, 'Quick connect…');
   await checked('Quick connect, empty');
   await page.keyboard.type('a@');
   await page.keyboard.press('Enter');
@@ -70,7 +72,7 @@ await flow('contrast', async ({ page, left, right, row, step, goTo }) => {
   await close();
 
   step('host key and passphrase prompts');
-  await connection.selectOption('ssh:locked');
+  await pick(right, 'locked');
   await page.getByRole('button', { name: /trust/i }).waitFor({ timeout: 15000 });
   await checked('Host key');
   await page.getByRole('button', { name: /trust/i }).click();
@@ -81,7 +83,7 @@ await flow('contrast', async ({ page, left, right, row, step, goTo }) => {
   await close();
 
   step('conflict');
-  await connection.selectOption('local');
+  await pick(right, 'Local');
   await goTo(left, `${process.env.E2E_DIR}/home/Documents`);
   await goTo(right, REMOTE);
   await row(left, 'hello.txt').click();
@@ -113,33 +115,100 @@ await flow('contrast', async ({ page, left, right, row, step, goTo }) => {
   await page.keyboard.press('Escape');
   await panel.waitFor({ state: 'detached' });
 
-  step('S3 profiles: empty, form, saved, delete confirm');
-  await connection.selectOption({ label: 'Manage S3 profiles…' });
-  await checked('S3 profiles, empty');
-  await dialog.getByRole('button', { name: 'Add profile…' }).click();
-  await checked('S3 profile form, AWS profile');
-  await dialog.getByLabel('Access key', { exact: true }).check();
-  await dialog.getByRole('button', { name: 'Save' }).click();
-  await dialog.getByText(/name/i).last().waitFor();
-  await checked('S3 profile form, error');
-  await dialog.getByLabel('Provider').selectOption({ label: 'Backblaze B2' });
-  await checked('S3 profile form, Backblaze B2 preset');
-  await dialog.getByLabel('Provider').selectOption({ label: 'Amazon S3' });
-  await dialog.getByLabel('Name', { exact: true }).fill('contrast-check');
-  await dialog.getByLabel('Access key ID').fill('key');
-  await dialog.getByLabel('Secret access key').fill('secret');
-  await checked('S3 profile form, filled');
-  await dialog.getByRole('button', { name: 'Save' }).click();
-  await dialog.getByText('contrast-check').waitFor();
-  await checked('S3 profiles, listed');
-  await dialog.getByLabel('Edit contrast-check').click();
-  await checked('S3 profile form, editing');
-  await dialog.getByRole('button', { name: 'Back' }).click();
-  await dialog.getByLabel('Delete contrast-check').click();
-  await checked('S3 profiles, delete confirm');
-  await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
-  await dialog.getByText(/no profiles yet/i).waitFor();
+  step('bookmarks menu');
+  await page.getByRole('tab', { name: /browser/i }).click();
+  await row(left, 'hello.txt').click();
+  await page.keyboard.press('Control+D');
+  await left.getByRole('button', { name: 'Bookmarks' }).click();
+  await page.getByText('Remove bookmark…').waitFor();
+  await audit.check('Bookmarks menu', { scope: '#root' });
+  await page.keyboard.press('Escape');
+
+  step('connections: local, config host, hidden host, S3 form, unsaved prompt, remove confirm');
+  const conns = dialog.first();
+  const option = (name) => conns.getByRole('option', { name });
+  await pick(right, 'Manage connections…');
+  await option(/^Local/).click();
+  await conns.getByRole('textbox', { name: /Name for/ }).first().waitFor();
+  await checked('Connections, local with a bookmark');
+  await conns.getByLabel('Open at').selectOption({ index: 1 });
+  await conns.getByRole('img', { name: 'Opens here' }).waitFor();
+  await checked('Connections, open-at bookmark');
+  await conns.getByRole('button', { name: 'Revert', exact: true }).click();
+  await conns.getByRole('button', { name: /^Remove bookmark/ }).first().click();
+  await conns.getByRole('button', { name: 'Keep', exact: true }).waitFor();
+  await checked('Connections, bookmark remove confirm');
+  await conns.getByRole('button', { name: 'Keep', exact: true }).click();
+  await option(/^locked/).click();
+  await conns.getByText(/ProxyJump|@/).first().waitFor({ timeout: 15000 });
+  await checked('Connections, config host');
+  await conns.getByRole('button', { name: 'Hide from picker' }).click();
+  await conns.getByRole('button', { name: 'Favorite', exact: true }).click();
+  await checked('Connections, config host edited');
+  await conns.getByRole('button', { name: 'Save' }).click();
+  await conns.getByRole('button', { name: 'Save' }).and(page.locator(':disabled')).waitFor();
+  await checked('Connections, hidden favorite host');
   await close();
+
+  step('connection picker: list, filter, hidden shown');
+  await right.getByRole('button', { name: 'Connection', exact: true }).click();
+  const picker = page.getByRole('listbox', { name: 'Connect to' });
+  await picker.waitFor();
+  await audit.check('Connection picker', { scope: '#root' });
+  await page.getByRole('button', { name: /hidden · Show/ }).click();
+  await picker.getByRole('option', { name: 'locked', exact: true }).waitFor();
+  await audit.check('Connection picker, hidden shown', { scope: '#root' });
+  await page.keyboard.type('zzz');
+  await page.getByText('No matching connections').waitFor();
+  await audit.check('Connection picker, no match', { scope: '#root' });
+  await page.keyboard.press('Escape');
+  await picker.waitFor({ state: 'detached' });
+
+  step('connections: undo hide, new host, S3 form, unsaved prompt, remove confirm');
+  await pick(right, 'Manage connections…');
+  await option(/locked/).click();
+  await conns.getByRole('button', { name: 'Hide from picker' }).click();
+  await conns.getByRole('button', { name: 'Favorite', exact: true }).click();
+  await conns.getByRole('button', { name: 'Save' }).click();
+  await conns.getByRole('button', { name: 'Save' }).and(page.locator(':disabled')).waitFor();
+
+  await conns.getByRole('button', { name: 'Add connection' }).click();
+  await conns.getByRole('button', { name: 'SSH host' }).click();
+  await checked('Connections, new SSH host');
+  await conns.getByRole('button', { name: 'Remove connection' }).click();
+  await conns.getByRole('button', { name: 'Add connection' }).click();
+  await conns.getByRole('button', { name: 'S3 profile' }).click();
+  await conns.getByLabel('Access key', { exact: true }).check();
+  await conns.getByRole('button', { name: 'Save' }).click();
+  await conns.getByRole('alert').waitFor();
+  await checked('Connections, S3 form error');
+  await conns.getByLabel('Provider').selectOption({ label: 'Backblaze B2' });
+  await checked('Connections, S3 Backblaze B2 preset');
+  await conns.getByLabel('Provider').selectOption({ label: 'Amazon S3' });
+  await conns.getByLabel('Name', { exact: true }).fill('contrast-check');
+  await conns.getByLabel('Access key ID').fill('key');
+  await conns.getByLabel('Secret access key').fill('secret');
+  await conns.getByRole('button', { name: 'Save' }).click();
+  await option(/^contrast-check/).waitFor();
+  await checked('Connections, S3 profile saved');
+
+  await conns.getByRole('radio', { name: 'Red', exact: true }).click();
+  await option(/^Local/).click();
+  await dialog.last().getByRole('button', { name: 'Don’t save' }).waitFor();
+  await checked('Connections, unsaved prompt');
+  await dialog.last().getByRole('button', { name: 'Don’t save' }).click();
+  await option(/^contrast-check/).click();
+  await conns.getByRole('button', { name: 'Remove connection' }).click();
+  await checked('Connections, remove confirm');
+  await conns.getByRole('button', { name: 'Remove', exact: true }).click();
+  await option(/^contrast-check/).waitFor({ state: 'detached' });
+  await close();
+  await row(left, 'hello.txt').click();
+  await page.keyboard.press('Control+D');
+  await dialog.getByRole('button', { name: 'Remove', exact: true }).waitFor();
+  await checked('Remove bookmark');
+  await dialog.getByRole('button', { name: 'Remove', exact: true }).click();
+  await dialog.waitFor({ state: 'detached' });
 
   audit.finish();
 });

@@ -7,7 +7,7 @@ import { selectOnly } from '../lib/selection';
 import { visibleEntries } from '../lib/sort';
 import { type PaneId, otherPane } from './paneTypes';
 import { usePanes } from './panes';
-import { useSettings, selectShowHidden } from './settings';
+import { showHiddenNow } from './connections';
 import { useUi } from './ui';
 
 export const LOCAL_CONN = 'local';
@@ -15,7 +15,7 @@ export const LOCAL_CONN = 'local';
 /** Selected entries that are still listed, visible and not filtered out, in display order. */
 export function selectedEntries(id: PaneId): Entry[] {
   const pane = usePanes.getState().panes[id];
-  const showHidden = selectShowHidden(useSettings.getState());
+  const showHidden = showHiddenNow(pane.connId);
   const visible = filterEntries(
     visibleEntries(pane.listing.replacing ?? pane.listing.entries, showHidden, pane.sort),
     pane.filter ?? ''

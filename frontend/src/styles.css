@@ -1,6 +1,6 @@
 @import './themes/index.css';
 
-/* Colours come from the theme files; data-theme on the root picks one (see lib/theme.ts). */
+/* Colors come from the theme files; data-theme on the root picks one (see lib/theme.ts). */
 :root {
   font-family:
     -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue',

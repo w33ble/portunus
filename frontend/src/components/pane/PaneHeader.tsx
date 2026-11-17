@@ -7,6 +7,7 @@ import type { PaneId } from '../../stores/paneTypes';
 import { usePanes } from '../../stores/panes';
 import controls from '../ui/controls.module.css';
 import { Icon } from '../ui/Icon';
+import { BookmarksMenu } from './BookmarksMenu';
 import { ConnectionPicker } from './ConnectionPicker';
 import styles from './PaneHeader.module.css';
 import { PathBar, type PathBarHandle } from './PathBar';
@@ -64,6 +65,7 @@ export function PaneHeader({ paneId, pathBarRef }: Props) {
         disabled={noConnection}
         onNavigate={(path) => usePanes.getState().navigate(paneId, path)}
       />
+      <BookmarksMenu paneId={paneId} />
       <button
         type="button"
         className={controls.iconButton}

@@ -2,14 +2,15 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { flow, assert, sameFile, previewFixtures, HOME } from './lib.mjs';
 
 await flow('s3', async (ctx) => {
-  const { page, left, right, row, step, shot, goTo, shiftDrag } = ctx;
+  const { page, left, right, row, step, shot, goTo, shiftDrag, pick } = ctx;
   await goTo(left, `${HOME}/Documents`);
   await row(left, 'random.bin').waitFor();
 
   step('create S3 profile');
-  await right.getByLabel('Connection').selectOption({ label: 'Manage S3 profiles…' });
-  await page.getByRole('button', { name: 'Add profile…' }).click();
+  await pick(right, 'Manage connections…');
   const dlg = page.getByRole('dialog');
+  await dlg.getByRole('button', { name: 'Add connection' }).click();
+  await dlg.getByRole('button', { name: 'S3 profile' }).click();
   await dlg.getByLabel('Provider').selectOption({ label: 'MinIO / RustFS (local)' });
   await dlg.getByLabel('Name', { exact: true }).fill('rustfs-e2e');
   const accessKey = dlg.getByLabel('Access key', { exact: true });
@@ -19,11 +20,12 @@ await flow('s3', async (ctx) => {
   await dlg.getByLabel('Secret access key').fill(process.env.S3_PASS);
   await dlg.getByLabel('Endpoint', { exact: true }).fill(process.env.S3_ENDPOINT);
   await shot('profile-form');
-  await page.getByRole('button', { name: 'Save' }).click();
-  await page.getByRole('button', { name: 'Done' }).click();
+  await dlg.getByRole('button', { name: 'Save' }).click();
+  await dlg.getByRole('option', { name: /^rustfs-e2e/ }).waitFor();
+  await dlg.getByRole('button', { name: 'Done' }).click();
 
   step('connect and create a bucket');
-  await right.getByLabel('Connection').selectOption({ label: 'rustfs-e2e' });
+  await pick(right, 'rustfs-e2e');
   await page.waitForTimeout(1000);
   await right.getByLabel('New folder').click();
   await page.keyboard.type('e2e-bucket');

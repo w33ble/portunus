@@ -4,6 +4,7 @@ export type {
   DirSummary,
   DropFiles,
   ListPage,
+  SSHHostDetails,
   Target,
 } from '../../bindings/github.com/w33ble/portunus/internal/services';
 export type {
@@ -25,4 +26,10 @@ export type { Entry } from '../../bindings/github.com/w33ble/portunus/internal/v
 export type { Settings } from '../../bindings/github.com/w33ble/portunus/internal/settings';
 export type { S3Profile } from '../../bindings/github.com/w33ble/portunus/internal/profiles';
 export type { Host } from '../../bindings/github.com/w33ble/portunus/internal/sshcfg';
+export type {
+  Bookmark,
+  Data as SavedData,
+  Host as SavedHost,
+  Prefs,
+} from '../../bindings/github.com/w33ble/portunus/internal/connprefs';
 export type { Info as VersionInfo } from '../../bindings/github.com/w33ble/portunus/internal/version';

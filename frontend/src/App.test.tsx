@@ -339,6 +339,23 @@ describe('App', () => {
     expect(host.querySelector('dialog')?.textContent).toContain('Passphrase');
   });
 
+  it('opens the connections dialog from the picker, on the pane’s own connection', async () => {
+    const picker = host.querySelector<HTMLButtonElement>(
+      '[data-pane="left"] button[aria-label="Connection"]'
+    )!;
+    await act(async () => picker.click());
+    const manage = [...host.querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => b.textContent === 'Manage connections…'
+    )!;
+    await act(async () => manage.click());
+
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.querySelector('h2')?.textContent).toBe('Connections');
+    const rows = [...dialog.querySelectorAll('[role=option]')];
+    expect(rows.map((r) => r.textContent)).toEqual(['Local', 'prod']);
+    expect(rows.find((r) => r.getAttribute('aria-selected') === 'true')?.textContent).toBe('Local');
+  });
+
   it('opens the delete confirmation for the selection and starts a delete job', async () => {
     const list = host.querySelector<HTMLElement>('[data-pane="left"] [data-filelist]');
     const row = [...host.querySelectorAll<HTMLElement>('[data-pane="left"] [role=option]')].find(

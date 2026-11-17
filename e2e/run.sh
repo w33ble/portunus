@@ -111,7 +111,7 @@ rm -rf "$OUT" && mkdir -p "$OUT"
 status=0
 docker run --rm --network host --user "$(id -u):$(id -g)" -e HOME=/tmp \
   -v "$ROOT/e2e:/work" -v "$OUT:/out" -v "$E2E_DIR:$E2E_DIR" -w /work \
-  -e E2E_FLOWS="${E2E_FLOWS:-layout sftp contrast s3 dialogs preview history appearance}" -e APP_URL="http://127.0.0.1:$APP_PORT/" -e E2E_DIR="$E2E_DIR" \
+  -e E2E_FLOWS="${E2E_FLOWS:-layout sftp contrast s3 connections dialogs preview history appearance}" -e APP_URL="http://127.0.0.1:$APP_PORT/" -e E2E_DIR="$E2E_DIR" \
   -e S3_ENDPOINT="http://$S3_ADDR" -e S3_USER=$S3_USER -e S3_PASS=$S3_PASS \
   "$PW_IMAGE" bash -c 'for f in $E2E_FLOWS; do node flows/$f.mjs || exit 1; done' || status=$?
 

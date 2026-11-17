@@ -4,7 +4,7 @@ import { writeFileSync } from 'node:fs';
 /** WCAG 2.x minimums. Disabled controls are exempt from AA but must stay legible, so they get the UI-component floor. */
 export const MIN = { text: 4.5, placeholder: 4.5, icon: 3, disabled: 3 };
 
-/** Runs in the page: every piece of text and every icon inside `scope`, with its colours composited over whatever is behind it. */
+/** Runs in the page: every piece of text and every icon inside `scope`, with its colors composited over whatever is behind it. */
 function measure(scope) {
   const channels = (s) => (s.match(/-?[\d.]+%?/g) ?? []).map((n) => (n.endsWith('%') ? parseFloat(n) / 100 : parseFloat(n)));
   const parse = (s) => {

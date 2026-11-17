@@ -167,7 +167,7 @@ tasks:
       - wails3 generate icons -input appicon.png -macfilename darwin/icons.icns -windowsfilename windows/icon.ico -iconcomposerinput appicon.icon -macassetdir darwin
 
   generate:notices:
-    summary: Writes THIRD_PARTY_NOTICES.md (Go, npm and colour palette licenses) for packages and releases
+    summary: Writes THIRD_PARTY_NOTICES.md (Go, npm and color palette licenses) for packages and releases
     run: once
     deps:
       - task: install:frontend:deps

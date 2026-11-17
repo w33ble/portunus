@@ -9,17 +9,6 @@
   background: var(--bg-chrome-active);
 }
 
-.picker {
-  flex: none;
-  width: 132px;
-}
-
-@container (width < 440px) {
-  .picker {
-    width: 104px;
-  }
-}
-
 .nav {
   display: flex;
   flex: none;

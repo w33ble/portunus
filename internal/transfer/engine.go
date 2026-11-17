@@ -55,12 +55,28 @@ type ConflictAsker interface {
 type Limits struct {
 	Global  int `json:"global"`
 	PerConn int `json:"perConn"`
+	// Conn overrides PerConn for individual connection IDs.
+	Conn map[string]int `json:"conn,omitzero"`
 }
 
 func (l Limits) normalized() Limits {
 	l.Global = max(l.Global, 1)
 	l.PerConn = max(l.PerConn, 1)
+	if l.Conn != nil {
+		conn := make(map[string]int, len(l.Conn))
+		for id, n := range l.Conn {
+			conn[id] = max(n, 1)
+		}
+		l.Conn = conn
+	}
 	return l
+}
+
+func (l Limits) forConn(id string) int {
+	if n, ok := l.Conn[id]; ok {
+		return n
+	}
+	return l.PerConn
 }
 
 // Policy decides what happens when a destination file already exists.

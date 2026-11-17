@@ -1,88 +1,88 @@
-import { targets } from '../../api';
-import type { Target } from '../../api/types';
-import { sortByLabel } from '../../lib/sort';
-import { useConnections } from '../../stores/connections';
+import { useCallback, useRef, useState } from 'react';
+import { EMPTY_PREFS, type KnownConnection, LOCAL_ID } from '../../lib/catalog';
+import { useCatalog, useConnections } from '../../stores/connections';
 import type { PaneId } from '../../stores/paneTypes';
 import { usePanes } from '../../stores/panes';
-import { useUi } from '../../stores/ui';
-import { Select } from '../ui/Select';
-import styles from './PaneHeader.module.css';
+import controls from '../ui/controls.module.css';
+import { Icon } from '../ui/Icon';
+import { ColorDot } from './ColorDot';
+import styles from './ConnectionPicker.module.css';
+import { ConnectionPickerPopover } from './ConnectionPickerPopover';
 
-const QUICK = '__quick';
-const MANAGE_S3 = '__s3';
-const SSH_UNAVAILABLE = '__ssh-unavailable';
-
-export function ConnectionPicker({ paneId }: { paneId: PaneId }) {
+/** The connection the pane shows: its catalog entry, else what the pane last connected to. */
+function usePaneConnection(
+  paneId: PaneId,
+  catalog: readonly KnownConnection[]
+): KnownConnection | null {
   const connId = usePanes((s) => s.panes[paneId].connId);
-  const lastLabel = usePanes((s) => s.panes[paneId].lastTarget?.label);
-  const { connections, hosts, profiles, sshUnavailable } = useConnections();
-  const openDialog = useUi((s) => s.openDialog);
+  const lastTarget = usePanes((s) => s.panes[paneId].lastTarget);
+  const live = useConnections((s) => s.connections.find((c) => c.id === connId));
+  const prefs = useConnections((s) => s.prefs[connId ?? LOCAL_ID]);
 
-  // Option values are connection ids, so the select always shows the pane's real connection.
-  const currentKey = connId ?? 'local';
-  const known = new Set([
-    'local',
-    ...hosts.map((h) => `ssh:${h.alias}`),
-    ...profiles.map((p) => `s3:${p.id}`),
-  ]);
-  const unlisted = known.has(currentKey)
-    ? null
-    : (connections.find((c) => c.id === currentKey)?.label ?? lastLabel ?? currentKey);
+  const id = connId ?? LOCAL_ID;
+  const known = catalog.find((c) => c.id === id);
+  if (known) return known;
 
-  const choose = (value: string) => {
-    const connect = (target: Target, label: string) =>
-      void usePanes.getState().connectTo(paneId, target, label);
+  const target = live?.target ?? lastTarget?.target;
+  const name = live?.label ?? lastTarget?.label;
+  if (!target || name === undefined) return null;
+  return {
+    id,
+    source: id.startsWith('s3:') ? 's3' : 'saved',
+    name,
+    target,
+    prefs: prefs ?? EMPTY_PREFS,
+  };
+}
 
-    if (value === QUICK) return openDialog({ kind: 'quickConnect', paneId });
-    if (value === MANAGE_S3) return openDialog({ kind: 's3Profiles' });
-    if (value === 'local') return connect(targets.local(), 'Local');
-    if (value.startsWith('ssh:')) {
-      const alias = value.slice('ssh:'.length);
-      return connect(targets.ssh(alias), alias);
-    }
-    if (value.startsWith('s3:')) {
-      const id = value.slice('s3:'.length);
-      const profile = profiles.find((p) => p.id === id);
-      return connect(targets.s3(id), profile?.name ?? 'S3');
-    }
+/** Pane header button that opens a filterable, grouped list of connections. */
+export function ConnectionPicker({ paneId }: { paneId: PaneId }) {
+  const catalog = useCatalog();
+  const current = usePaneConnection(paneId, catalog);
+  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+
+  const open = () => {
+    const rect = trigger.current?.getBoundingClientRect();
+    if (rect) setAnchor({ x: rect.left, y: rect.bottom + 4 });
   };
 
+  const close = useCallback((refocus: boolean) => {
+    setAnchor(null);
+    if (refocus) trigger.current?.focus();
+  }, []);
+
   return (
-    <Select
-      className={styles.picker}
-      aria-label="Connection"
-      value={currentKey}
-      onChange={(e) => choose(e.target.value)}
-    >
-      <option value="local">Local</option>
-      {unlisted !== null && <option value={currentKey}>{unlisted}</option>}
-      {(hosts.length > 0 || sshUnavailable !== '') && (
-        <optgroup label="SSH hosts">
-          {sshUnavailable !== '' && (
-            <option value={SSH_UNAVAILABLE} disabled>
-              {sshUnavailable}
-            </option>
-          )}
-          {sortByLabel(hosts, (h) => h.alias).map((h) => (
-            <option key={h.alias} value={`ssh:${h.alias}`}>
-              {h.alias}
-            </option>
-          ))}
-        </optgroup>
+    <>
+      <button
+        ref={trigger}
+        type="button"
+        className={`${controls.field} ${styles.trigger}`}
+        aria-label="Connection"
+        aria-haspopup="listbox"
+        aria-expanded={anchor !== null}
+        onClick={() => (anchor === null ? open() : close(false))}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown' && anchor === null) {
+            e.preventDefault();
+            open();
+          }
+        }}
+      >
+        {current?.prefs.color && <ColorDot color={current.prefs.color} />}
+        <span className={styles.name}>{current?.name ?? 'Local'}</span>
+        <Icon name="chevronDown" size={12} className={styles.chevron} />
+      </button>
+      {anchor && (
+        <ConnectionPickerPopover
+          paneId={paneId}
+          catalog={catalog}
+          current={current}
+          anchor={anchor}
+          trigger={trigger}
+          onClose={close}
+        />
       )}
-      {profiles.length > 0 && (
-        <optgroup label="S3">
-          {sortByLabel(profiles, (p) => p.name).map((p) => (
-            <option key={p.id} value={`s3:${p.id}`}>
-              {p.name}
-            </option>
-          ))}
-        </optgroup>
-      )}
-      <optgroup label="Other">
-        <option value={QUICK}>Quick connect…</option>
-        <option value={MANAGE_S3}>Manage S3 profiles…</option>
-      </optgroup>
-    </Select>
+    </>
   );
 }

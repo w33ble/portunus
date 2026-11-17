@@ -49,7 +49,7 @@ func TestScriptSetsSavedThemeOrResolvesSystemInPage(t *testing.T) {
 }
 
 // The palettes live in CSS; the catalog must agree on which themes exist, which are dark, and their
-// background, or the native window flashes a different colour before the page paints.
+// background, or the native window flashes a different color before the page paints.
 func TestCatalogMatchesFrontendThemes(t *testing.T) {
 	t.Parallel()
 	dir := filepath.Join("..", "..", "frontend", "src", "themes")

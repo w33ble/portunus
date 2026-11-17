@@ -14,6 +14,7 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
+	"github.com/w33ble/portunus/internal/connprefs"
 	"github.com/w33ble/portunus/internal/profiles"
 	"github.com/w33ble/portunus/internal/prompt"
 	"github.com/w33ble/portunus/internal/settings"
@@ -31,7 +32,7 @@ import (
 type Emitter func(name string, data any)
 
 type Config struct {
-	// ConfigDir holds settings.json, profiles.json, and the fallback known_hosts.
+	// ConfigDir holds settings.json, profiles.json, connections.json, and the fallback known_hosts.
 	ConfigDir string
 	Emit      Emitter
 	Secrets   profiles.SecretStore
@@ -52,6 +53,7 @@ type App struct {
 	broker    *prompt.Broker
 	settings  *settings.Store
 	profiles  *profiles.Store
+	conns     *connprefs.Store
 	resolver  sshcfg.Resolver
 	sshErr    error  // non-nil when no ssh binary was found
 	sshConfig string // explicit config file (PORTUNUS_SSH_CONFIG); "" means ssh's defaults
@@ -75,6 +77,9 @@ func New(cfg Config) (*App, error) {
 		return nil, err
 	}
 	if a.profiles, err = profiles.Open(cfg.ConfigDir, cfg.Secrets); err != nil {
+		return nil, err
+	}
+	if a.conns, err = connprefs.Open(cfg.ConfigDir); err != nil {
 		return nil, err
 	}
 
@@ -102,7 +107,7 @@ func New(cfg Config) (*App, error) {
 		},
 		Conflicts: a.broker,
 		Emit:      func(u transfer.Update) { a.emit(EventTransfers, u) },
-		Limits:    transfer.Limits{Global: cur.GlobalTransfers, PerConn: cur.PerConnectionTransfers},
+		Limits:    a.limits(cur),
 		Logger:    log,
 	})
 
@@ -159,8 +164,22 @@ func (a *App) applySettings(s settings.Settings) {
 		Logger:            a.log,
 	})
 	if a.engine != nil {
-		a.engine.SetLimits(transfer.Limits{Global: s.GlobalTransfers, PerConn: s.PerConnectionTransfers})
+		a.engine.SetLimits(a.limits(s))
 	}
+}
+
+// limits combines the transfer settings with each connection's own limit.
+func (a *App) limits(s settings.Settings) transfer.Limits {
+	l := transfer.Limits{Global: s.GlobalTransfers, PerConn: s.PerConnectionTransfers}
+	for id, p := range a.conns.Data().Prefs {
+		if p.Transfers > 0 {
+			if l.Conn == nil {
+				l.Conn = map[string]int{}
+			}
+			l.Conn[id] = p.Transfers
+		}
+	}
+	return l
 }
 
 func (a *App) dial(ctx context.Context, t Target) (dialed, error) {
