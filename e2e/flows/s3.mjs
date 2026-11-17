@@ -10,12 +10,14 @@ await flow('s3', async (ctx) => {
   await right.getByLabel('Connection').selectOption({ label: 'Manage S3 profiles…' });
   await page.getByRole('button', { name: 'Add profile…' }).click();
   const dlg = page.getByRole('dialog');
+  await dlg.getByLabel('Provider').selectOption({ label: 'MinIO / RustFS (local)' });
   await dlg.getByLabel('Name', { exact: true }).fill('rustfs-e2e');
-  await dlg.getByLabel('Access key', { exact: true }).check();
+  const accessKey = dlg.getByLabel('Access key', { exact: true });
+  assert(await accessKey.isChecked(), 'preset picks access keys');
+  assert(await dlg.getByLabel(/path-style/).isChecked(), 'preset picks path-style');
   await dlg.getByLabel('Access key ID').fill(process.env.S3_USER);
   await dlg.getByLabel('Secret access key').fill(process.env.S3_PASS);
-  await dlg.getByLabel('Endpoint (optional)').fill(process.env.S3_ENDPOINT);
-  await dlg.getByLabel(/path-style/).check();
+  await dlg.getByLabel('Endpoint', { exact: true }).fill(process.env.S3_ENDPOINT);
   await shot('profile-form');
   await page.getByRole('button', { name: 'Save' }).click();
   await page.getByRole('button', { name: 'Done' }).click();

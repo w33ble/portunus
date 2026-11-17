@@ -1,5 +1,13 @@
 import type { S3FormValues } from '../../lib/s3Form';
+import {
+  S3_PROVIDERS,
+  S3_PROVIDER_IDS,
+  type S3ProviderId,
+  applyProvider,
+  applyRegion,
+} from '../../lib/s3Providers';
 import controls from '../ui/controls.module.css';
+import { Select } from '../ui/Select';
 import styles from './S3ProfilesDialog.module.css';
 
 interface Props {
@@ -11,15 +19,31 @@ export function S3ProfileForm({ values, onChange }: Props) {
   const set = <K extends keyof S3FormValues>(key: K, value: S3FormValues[K]) =>
     onChange({ ...values, [key]: value });
   const editing = values.id !== '';
+  const provider = S3_PROVIDERS[values.provider];
 
   return (
     <>
+      <label className={controls.label}>
+        Provider
+        <Select
+          value={values.provider}
+          autoFocus={!editing}
+          onChange={(e) => onChange(applyProvider(values, e.target.value as S3ProviderId))}
+        >
+          {S3_PROVIDER_IDS.map((id) => (
+            <option key={id} value={id}>
+              {S3_PROVIDERS[id].label}
+            </option>
+          ))}
+        </Select>
+      </label>
+
       <label className={controls.label}>
         Name
         <input
           className={controls.field}
           value={values.name}
-          autoFocus
+          autoFocus={editing}
           onChange={(e) => set('name', e.target.value)}
         />
       </label>
@@ -86,13 +110,26 @@ export function S3ProfileForm({ values, onChange }: Props) {
       <div className={styles.pair}>
         <label className={controls.label}>
           Region
-          <input
-            className={controls.field}
-            value={values.region}
-            placeholder="us-east-1"
-            spellCheck={false}
-            onChange={(e) => set('region', e.target.value)}
-          />
+          {provider.kind === 'regional' ? (
+            <Select
+              value={values.region}
+              onChange={(e) => onChange(applyRegion(values, e.target.value))}
+            >
+              {provider.regions.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <input
+              className={controls.field}
+              value={values.region}
+              placeholder="us-east-1"
+              spellCheck={false}
+              onChange={(e) => set('region', e.target.value)}
+            />
+          )}
         </label>
         <label className={controls.label}>
           Bucket (optional)
@@ -106,17 +143,28 @@ export function S3ProfileForm({ values, onChange }: Props) {
         </label>
       </div>
 
-      <label className={controls.label}>
-        Endpoint (optional)
-        <input
-          className={controls.field}
-          value={values.endpoint}
-          placeholder="https://s3.example.com (blank for AWS)"
-          spellCheck={false}
-          autoCapitalize="off"
-          onChange={(e) => set('endpoint', e.target.value)}
-        />
-      </label>
+      {provider.kind === 'regional' && (
+        <p className={controls.hint}>
+          Endpoint <span className={controls.mono}>{values.endpoint}</span>
+        </p>
+      )}
+      {(provider.kind === 'custom' || provider.kind === 'manual') && (
+        <label className={controls.label}>
+          {provider.kind === 'custom' ? 'Endpoint' : 'Endpoint (optional)'}
+          <input
+            className={controls.field}
+            value={values.endpoint}
+            placeholder={
+              provider.kind === 'custom'
+                ? provider.placeholder
+                : 'https://s3.example.com (blank for AWS)'
+            }
+            spellCheck={false}
+            autoCapitalize="off"
+            onChange={(e) => set('endpoint', e.target.value)}
+          />
+        </label>
+      )}
 
       <label className={controls.checkbox}>
         <input
