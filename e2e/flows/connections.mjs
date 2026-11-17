@@ -71,10 +71,36 @@ await flow('connections', async ({ page, left, right, row, step, shot, goTo, pic
   await pick(left, 'Local');
   await row(left, 'hello.txt').waitFor({ timeout: 15000 });
 
+  step('bookmark from the context menu, then reorder in the manager');
+  const menu2 = page.getByRole('menu');
+  const fileList = left.locator('[data-filelist]');
+  const box = await fileList.boundingBox();
+  await fileList.click({ button: 'right', position: { x: box.width / 2, y: box.height - 20 } });
+  await menu2.getByRole('menuitem', { name: /Remove bookmark…/ }).waitFor();
+  await page.keyboard.press('Escape');
+  await row(left, 'photos').click({ button: 'right' });
+  await menu2.getByRole('menuitem', { name: /Bookmark folder/ }).waitFor();
+  await shot('context-menu-bookmark', { settle: false });
+  await menu2.getByRole('menuitem', { name: /Bookmark folder/ }).click();
+  await pick(left, 'Manage connections…');
+  await conns.getByRole('option', { name: /^Local/ }).click();
+  await button('Move photos').focus();
+  await page.keyboard.press('ArrowUp');
+  await save();
+  await shot('bookmarks-reordered');
+  await button('Done').click();
+  await left.getByRole('button', { name: 'Bookmarks' }).click();
+  const onLocal = await menu2.getByRole('menuitem').allInnerTexts();
+  const at = (name) => onLocal.findIndex((t) => t.startsWith(name));
+  assert(at('photos') !== -1 && at('photos') < at('Documents'), `bookmark order ${onLocal}`);
+  await page.keyboard.press('Escape');
+
   step('clean up: remove the bookmarks, color and favorite');
   await pick(left, 'Manage connections…');
   await conns.getByRole('option', { name: /^Local/ }).click();
   await button('Remove bookmark Documents').click();
+  await button('Remove').click();
+  await button('Remove bookmark photos').click();
   await button('Remove').click();
   assert((await conns.getByLabel('Open at').inputValue()) === '', 'open-at falls back to home');
   await save();

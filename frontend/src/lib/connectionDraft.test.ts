@@ -10,6 +10,7 @@ import {
   normalizeBookmarks,
   normalizePrefs,
   validateHostFields,
+  moveBookmark,
   withBookmarks,
 } from './connectionDraft';
 
@@ -99,6 +100,8 @@ describe('isDirty', () => {
     expect(isDirty(base, { ...base, bookmarks: [{ ...bookmark, name: 'Logs' }] })).toBe(true);
     expect(isDirty(base, { ...base, bookmarks: [{ ...bookmark, pinned: true }] })).toBe(true);
     expect(isDirty(base, { ...base, bookmarks: [] })).toBe(true);
+    const two = { ...base, bookmarks: [bookmark, { ...bookmark, id: 'b2', path: '/tmp' }] };
+    expect(isDirty(two, { ...two, bookmarks: moveBookmark(two.bookmarks, 0, 1) })).toBe(true);
   });
 
   it('is dirty after editing an address or typing an S3 secret', () => {
@@ -118,6 +121,21 @@ describe('isDirty', () => {
         identity: { ...s3.identity, form: { ...s3.identity.form, secret: 'x' } },
       })
     ).toBe(true);
+  });
+});
+
+describe('moveBookmark', () => {
+  const [a, b, c] = ['/a', '/b', '/c'].map((path, i) => ({ id: `b${i}`, connId: 'x', path }));
+
+  it('moves an item down and up', () => {
+    expect(moveBookmark([a!, b!, c!], 0, 2).map((x) => x.path)).toEqual(['/b', '/c', '/a']);
+    expect(moveBookmark([a!, b!, c!], 2, 0).map((x) => x.path)).toEqual(['/c', '/a', '/b']);
+  });
+
+  it('does not mutate its input', () => {
+    const list = [a!, b!];
+    moveBookmark(list, 0, 1);
+    expect(list).toEqual([a, b]);
   });
 });
 

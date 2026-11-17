@@ -35,6 +35,7 @@ const PATHS = {
     'M1.5 8s2.5-4.5 6.5-4.5S14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM2.5 2.5l11 11',
   bookmark: 'M4.5 2.5h7v11L8 10.5l-3.5 3z',
   star: 'M8 2l1.8 3.7 4 .6-2.9 2.8.7 4L8 11.2l-3.6 1.9.7-4-2.9-2.8 4-.6z',
+  grip: 'M6 4h.01M10 4h.01M6 8h.01M10 8h.01M6 12h.01M10 12h.01',
 } as const;
 
 export type IconName = keyof typeof PATHS;

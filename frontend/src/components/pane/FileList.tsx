@@ -16,9 +16,11 @@ import {
   requestRename,
   selectedEntries,
 } from '../../stores/fileOps';
+import { bookmarkFolders, canBookmark, toggleBookmark } from '../../stores/bookmarks';
 import type { PaneId } from '../../stores/paneTypes';
+import { bookmarkAt } from '../../lib/catalog';
 import { usePanes } from '../../stores/panes';
-import { useShowHidden } from '../../stores/connections';
+import { useConnections, useShowHidden } from '../../stores/connections';
 import { useUi } from '../../stores/ui';
 import { ColumnHeader } from './ColumnHeader';
 import { ContextMenu, type MenuItem } from './ContextMenu';
@@ -34,8 +36,11 @@ const HEADER_HEIGHT = 22;
 interface MenuState {
   x: number;
   y: number;
+  /** Opened on a row, as opposed to the empty space below the rows. */
+  onRow: boolean;
 }
 
+const BOOKMARK_HINT = 'Save this host to bookmark its folders';
 const MOD = IS_MAC ? '⌘' : 'Ctrl+';
 
 interface Props {
@@ -51,6 +56,7 @@ export function FileList({ paneId, onEditPath }: Props) {
   const typeAhead = useRef(EMPTY_TYPE_AHEAD);
   const [typed, setTyped] = useState('');
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const bookmarks = useConnections((s) => s.bookmarks);
   const drop = useListDrop(paneId, pane.path);
 
   const shown = shownEntries(pane.listing);
@@ -144,7 +150,7 @@ export function FileList({ paneId, onEditPath }: Props) {
           usePanes.getState().setSelection(paneId, selectOnly(entry.path));
         }
       }
-      setMenu({ x: event.clientX, y: event.clientY });
+      setMenu({ x: event.clientX, y: event.clientY, onRow: entry !== null });
     },
     [paneId]
   );
@@ -210,6 +216,7 @@ export function FileList({ paneId, onEditPath }: Props) {
         shortcut: `${MOD}⌫`,
         onSelect: () => requestDelete(paneId),
       },
+      ...bookmarkItems(menu?.onRow ? picked.filter((e) => e.isDir).map((e) => e.path) : null),
       {
         label: 'New folder…',
         separator: true,
@@ -220,6 +227,32 @@ export function FileList({ paneId, onEditPath }: Props) {
         label: 'Refresh',
         shortcut: `${MOD}R`,
         onSelect: () => usePanes.getState().refresh(paneId),
+      },
+    ];
+  };
+
+  // `folders` is the selected folders of a row menu, or null for the empty-space menu.
+  const bookmarkItems = (folders: string[] | null): MenuItem[] => {
+    if (folders?.length === 0) return [];
+    const hint = canBookmark(pane.connId) ? {} : { disabled: true, hint: BOOKMARK_HINT };
+    const marked = (path: string) =>
+      pane.connId !== null && bookmarkAt(bookmarks, pane.connId, path) !== undefined;
+    if (folders === null || folders.length === 1) {
+      const path = folders?.[0] ?? pane.path;
+      const label = marked(path)
+        ? 'Remove bookmark…'
+        : folders === null
+          ? 'Bookmark this folder'
+          : 'Bookmark folder';
+      return [{ label, ...hint, onSelect: () => void toggleBookmark(paneId, path) }];
+    }
+    const fresh = folders.filter((p) => !marked(p));
+    const label = fresh.length === 1 ? 'Bookmark folder' : `Bookmark ${fresh.length} folders`;
+    return [
+      {
+        label,
+        ...(fresh.length === 0 ? { disabled: true } : hint),
+        onSelect: () => void bookmarkFolders(paneId, fresh),
       },
     ];
   };

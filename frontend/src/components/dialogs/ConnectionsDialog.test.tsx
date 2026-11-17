@@ -128,6 +128,26 @@ const click = (el: HTMLElement) => act(() => el.click());
 const radio = (label: string) =>
   host.querySelector<HTMLInputElement>(`input[type=radio][aria-label="${label}"]`)!;
 
+const names = () =>
+  [...host.querySelectorAll<HTMLInputElement>('input[aria-label^="Name for "]')].map((i) =>
+    i.getAttribute('aria-label')!
+  );
+const pressKey = (el: HTMLElement, key: string) =>
+  act(() => {
+    el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  });
+const pointer = (target: EventTarget, kind: string, clientY: number) =>
+  act(() => {
+    target.dispatchEvent(
+      new MouseEvent(kind, { bubbles: true, button: 0, clientY } as MouseEventInit)
+    );
+  });
+// Rows are 40px tall, stacked from the top, so row n spans 40n to 40n + 40.
+const layOut = () =>
+  [...host.querySelectorAll<HTMLElement>('button[aria-label^="Move "]')].forEach((grip, n) => {
+    grip.parentElement!.getBoundingClientRect = () => ({ top: n * 40, height: 40 }) as DOMRect;
+  });
+
 async function clickAsync(el: HTMLElement) {
   await act(async () => el.click());
 }
@@ -471,6 +491,91 @@ describe('ConnectionsDialog', () => {
     click(button('Remove'));
     expect(host.querySelector('input[aria-label="Name for /tmp"]')).toBeNull();
     expect(option('prod').textContent).toContain('edited');
+  });
+
+  describe('reordering bookmarks', () => {
+    it('moves a row with the arrow keys on its handle, keeping focus there', async () => {
+      seed({ bookmarks: [logs, tmp] });
+      show('ssh:prod');
+      expect(option('prod').textContent).not.toContain('edited');
+
+      const grip = button('Move logs');
+      grip.focus();
+      pressKey(grip, 'ArrowDown');
+
+      expect(names()).toEqual(['Name for /tmp', 'Name for /srv/logs']);
+      expect(document.activeElement).toBe(button('Move logs'));
+      expect(option('prod').textContent).toContain('edited');
+      pressKey(button('Move logs'), 'ArrowDown');
+      expect(names()).toEqual(['Name for /tmp', 'Name for /srv/logs']);
+      pressKey(button('Move Scratch'), 'ArrowDown');
+      pressKey(button('Move Scratch'), 'ArrowUp');
+      expect(names()).toEqual(['Name for /tmp', 'Name for /srv/logs']);
+
+      await clickAsync(button('Save'));
+      expect(api.connections.saveConnectionPrefs).toHaveBeenCalledWith('ssh:prod', {}, [tmp, logs]);
+    });
+
+    it('drags a row by its handle, reflowing the others, and saves the new order', async () => {
+      seed({ bookmarks: [logs, tmp, { id: 'b3', connId: 'ssh:prod', path: '/etc' }] });
+      show('ssh:prod');
+      layOut();
+
+      pointer(button('Move logs'), 'pointerdown', 20);
+      pointer(window, 'pointermove', 70);
+      expect(names()).toEqual(['Name for /tmp', 'Name for /srv/logs', 'Name for /etc']);
+      pointer(window, 'pointermove', 110);
+      expect(names()).toEqual(['Name for /tmp', 'Name for /etc', 'Name for /srv/logs']);
+      pointer(window, 'pointerup', 110);
+
+      expect(names()).toEqual(['Name for /tmp', 'Name for /etc', 'Name for /srv/logs']);
+      expect(option('prod').textContent).toContain('edited');
+      await clickAsync(button('Save'));
+      expect(api.connections.saveConnectionPrefs).toHaveBeenCalledWith('ssh:prod', {}, [
+        tmp,
+        { id: 'b3', connId: 'ssh:prod', path: '/etc' },
+        logs,
+      ]);
+    });
+
+    it('leaves the order alone when the drag is cancelled with Escape', () => {
+      seed({ bookmarks: [logs, tmp] });
+      show('ssh:prod');
+      layOut();
+
+      pointer(button('Move logs'), 'pointerdown', 20);
+      pointer(window, 'pointermove', 70);
+      act(() => {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      });
+      pointer(window, 'pointerup', 70);
+
+      expect(names()).toEqual(['Name for /srv/logs', 'Name for /tmp']);
+      expect(option('prod').textContent).not.toContain('edited');
+    });
+
+    it('cancels a pending remove confirmation when a drag starts', () => {
+      seed({ bookmarks: [logs, tmp] });
+      show('ssh:prod');
+      layOut();
+      click(button('Remove bookmark logs'));
+      expect(button('Keep')).toBeDefined();
+
+      pointer(button('Move Scratch'), 'pointerdown', 60);
+      pointer(window, 'pointerup', 60);
+
+      expect(button('Keep')).toBeUndefined();
+    });
+  });
+
+  it('puts the pin star after the name and before the remove button', () => {
+    seed({ bookmarks: [logs] });
+    show('ssh:prod');
+    const row = button('Pin logs').parentElement!;
+    const order = [...row.querySelectorAll('button, input')].map((el) =>
+      el.getAttribute('aria-label')
+    );
+    expect(order).toEqual(['Move logs', 'Name for /srv/logs', 'Pin logs', 'Remove bookmark logs']);
   });
 
   it('offers Home folder and the draft’s bookmarks to open at, and saves the choice', async () => {

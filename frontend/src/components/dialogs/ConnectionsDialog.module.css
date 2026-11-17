@@ -255,6 +255,23 @@
   gap: 6px;
 }
 
+.bookmark[data-dragging='true'] {
+  position: relative;
+  border-radius: var(--radius);
+  background: var(--bg-hover);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.grip {
+  flex: none;
+  cursor: grab;
+  touch-action: none;
+}
+
+.bookmark[data-dragging='true'] .grip {
+  cursor: grabbing;
+}
+
 .bookmarkText {
   display: grid;
   flex: 1;

@@ -109,6 +109,14 @@ export function withBookmarks(draft: Draft, bookmarks: Bookmark[]): Draft {
   return { ...draft, bookmarks, prefs: keep ? draft.prefs : rest };
 }
 
+/** The list with the item at `from` moved to index `to`. */
+export function moveBookmark(list: readonly Bookmark[], from: number, to: number): Bookmark[] {
+  const next = [...list];
+  const [item] = next.splice(from, 1);
+  if (item !== undefined) next.splice(to, 0, item);
+  return next;
+}
+
 export function identityChanged(base: Draft, draft: Draft): boolean {
   return JSON.stringify(base.identity) !== JSON.stringify(draft.identity);
 }

@@ -31,19 +31,33 @@ export function canBookmark(connId: string | null): boolean {
   return connId !== null && catalogNow().some((c) => c.id === connId);
 }
 
-/** ⌘D: bookmarks the pane's folder, or asks to remove its bookmark when it has one. */
-export async function toggleBookmark(paneId: PaneId): Promise<void> {
-  const { connId, path } = usePanes.getState().panes[paneId];
+/** Bookmarks each folder on the pane's connection that isn't bookmarked yet. */
+export async function bookmarkFolders(paneId: PaneId, paths: readonly string[]): Promise<void> {
+  const { connId } = usePanes.getState().panes[paneId];
   if (connId === null) return;
-  const { bookmarks, addBookmark } = useConnections.getState();
-  const existing = bookmarkAt(bookmarks, connId, path);
+  for (const path of paths) {
+    const { bookmarks, addBookmark } = useConnections.getState();
+    if (bookmarkAt(bookmarks, connId, path)) continue;
+    try {
+      await addBookmark(connId, path);
+    } catch (e) {
+      useUi.getState().showError('Couldn’t add bookmark', toAppError(e));
+      return;
+    }
+  }
+}
+
+/** Bookmarks a folder (default: the pane's own), or asks to remove its bookmark when it has one. */
+export async function toggleBookmark(
+  paneId: PaneId,
+  path = usePanes.getState().panes[paneId].path
+): Promise<void> {
+  const { connId } = usePanes.getState().panes[paneId];
+  if (connId === null) return;
+  const existing = bookmarkAt(useConnections.getState().bookmarks, connId, path);
   if (existing) {
     useUi.getState().openDialog({ kind: 'removeBookmark', bookmark: existing });
     return;
   }
-  try {
-    await addBookmark(connId, path);
-  } catch (e) {
-    useUi.getState().showError('Couldn’t add bookmark', toAppError(e));
-  }
+  await bookmarkFolders(paneId, [path]);
 }
