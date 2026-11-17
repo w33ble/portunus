@@ -155,7 +155,16 @@ export function BookmarksEditor({ connId, bookmarks, openAt, onChange }: Props) 
               />
               <span className={`${controls.mono} ${styles.path}`}>{b.path}</span>
             </div>
-            {b.path === openAt && <span className={styles.badge}>Opens here</span>}
+            {b.path === openAt && (
+              <span
+                className={styles.opensHere}
+                role="img"
+                aria-label="Opens here"
+                title="Opens here: new connections start in this folder"
+              >
+                <Icon name="home" />
+              </span>
+            )}
             <button
               type="button"
               className={`${controls.iconButton} ${b.pinned ? styles.pinned : ''}`}

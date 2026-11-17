@@ -589,7 +589,7 @@ describe('ConnectionsDialog', () => {
     ]);
 
     choose(openAt, '/tmp');
-    expect(host.textContent).toContain('Opens here');
+    expect(host.querySelector('[role=img][aria-label="Opens here"]')).not.toBeNull();
     await clickAsync(button('Save'));
 
     expect(api.connections.saveConnectionPrefs).toHaveBeenCalledWith(
@@ -617,13 +617,13 @@ describe('ConnectionsDialog', () => {
     seed({ bookmarks: [logs, tmp], prefs: { 'ssh:prod': { openAt: '/tmp' } } });
     show('ssh:prod');
     expect((field('Open at') as HTMLSelectElement).value).toBe('/tmp');
-    expect(host.textContent).toContain('Opens here');
+    expect(host.querySelector('[role=img][aria-label="Opens here"]')).not.toBeNull();
 
     click(button('Remove bookmark Scratch'));
     click(button('Remove'));
 
     expect((field('Open at') as HTMLSelectElement).value).toBe('');
-    expect(host.textContent).not.toContain('Opens here');
+    expect(host.querySelector('[role=img][aria-label="Opens here"]')).toBeNull();
     await clickAsync(button('Save'));
     expect(api.connections.saveConnectionPrefs).toHaveBeenCalledWith('ssh:prod', {}, [
       { id: 'b1', connId: 'ssh:prod', path: '/srv/logs' },

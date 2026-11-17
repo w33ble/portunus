@@ -292,14 +292,14 @@ button.favorite {
   color: var(--accent);
 }
 
-.badge {
+/* Marks the bookmark set as Open at; green so it doesn't read as the blue pin star. */
+.opensHere {
+  display: inline-grid;
   flex: none;
-  padding: 1px 6px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  font-size: 12px;
-  white-space: nowrap;
+  place-items: center;
+  width: 24px;
+  height: 22px;
+  color: var(--success);
 }
 
 .confirmRow {

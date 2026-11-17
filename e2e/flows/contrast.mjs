@@ -131,6 +131,10 @@ await flow('contrast', async ({ page, left, right, row, step, goTo, pick }) => {
   await option(/^Local/).click();
   await conns.getByRole('textbox', { name: /Name for/ }).first().waitFor();
   await checked('Connections, local with a bookmark');
+  await conns.getByLabel('Open at').selectOption({ index: 1 });
+  await conns.getByRole('img', { name: 'Opens here' }).waitFor();
+  await checked('Connections, open-at bookmark');
+  await conns.getByRole('button', { name: 'Revert', exact: true }).click();
   await conns.getByRole('button', { name: /^Remove bookmark/ }).first().click();
   await conns.getByRole('button', { name: 'Keep', exact: true }).waitFor();
   await checked('Connections, bookmark remove confirm');

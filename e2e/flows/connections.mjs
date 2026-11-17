@@ -64,7 +64,7 @@ await flow('connections', async ({ page, left, right, row, step, shot, goTo, pic
   await conns.getByLabel('Folder to bookmark').fill(DOCS);
   await button('Add').click();
   await conns.getByLabel('Open at').selectOption(DOCS);
-  await conns.getByText('Opens here').waitFor();
+  await conns.getByRole('img', { name: 'Opens here' }).waitFor();
   await save();
   await shot('open-at');
   await button('Done').click();
